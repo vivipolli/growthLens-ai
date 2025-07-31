@@ -8,7 +8,6 @@ import { AgentRequest, UserTransactionRequest, AgentResponse, SignTransactionReq
 
 export class AgentService {
   private basicAgent?: HederaConversationalAgent;
-  private userTransactionAgent?: HederaConversationalAgent;
   private agentSigner?: ServerSigner;
   private isInitialized = false;
 
@@ -22,7 +21,6 @@ export class AgentService {
 
       // Only initialize AI agent if API key is available
       if (!config.openai.apiKey) {
-        console.log('⚠️  No OpenAI API key available - AI agent features will be disabled');
         console.log('💡 Set OPENAI_API_KEY or OPENROUTER_API_KEY to enable AI features');
         this.isInitialized = true;
         return;
@@ -50,7 +48,6 @@ export class AgentService {
       console.log('✅ AI Agent initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize AI agent:', error);
-      console.log('⚠️  AI features will be disabled, but server will continue running');
       this.isInitialized = true;
     }
   }

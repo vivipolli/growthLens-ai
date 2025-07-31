@@ -14,7 +14,6 @@ import {
 import { saveUserProfile } from '../utils/userProfile.js'
 
 const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal, onEditBusiness }) => {
-    const [activeTab, setActiveTab] = useState('overview')
     const [showProfileMenu, setShowProfileMenu] = useState(false)
     const { gradients } = useTheme()
 
@@ -93,22 +92,6 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Navigation Tabs */}
-                <div className="flex space-x-1 bg-white/50 rounded-xl p-1 mb-8">
-                    {['overview', 'missions', 'goals', 'analytics', 'community'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${activeTab === tab
-                                ? 'bg-white text-purple-600 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                        >
-                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                        </button>
-                    ))}
-                </div>
-
                 {/* Main Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column - Missions & Goals */}

@@ -194,10 +194,7 @@ function AppContent() {
             element={
               <>
                 <SignedIn>
-                  {() => {
-                    console.log('🔧 SignedIn component rendering OnboardingRedirect')
-                    return <OnboardingRedirect />
-                  }}
+                  <OnboardingRedirect />
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/sign-in" replace />
@@ -288,6 +285,7 @@ function OnboardingRedirect() {
   const navigate = useNavigate()
 
   console.log('🔧 OnboardingRedirect component rendered')
+  console.log('🔧 Current user state - isLoaded: true, isSignedIn: true')
 
   React.useEffect(() => {
     console.log('🔄 OnboardingRedirect useEffect triggered')

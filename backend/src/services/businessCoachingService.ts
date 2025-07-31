@@ -10,10 +10,12 @@ import {
   BusinessInsight 
 } from '../types/business.types';
 import { v4 as uuidv4 } from 'uuid';
+import { createInstance } from './aiService';
 
 export class BusinessCoachingService {
   private agent?: HederaConversationalAgent;
   private agentSigner?: ServerSigner;
+  private aiLLM?: any;
 
   async initialize() {
     console.log('🔄 BusinessCoachingService: Starting initialization...');
@@ -32,34 +34,17 @@ export class BusinessCoachingService {
       return;
     }
 
-    // Configuração para OpenRouter ou OpenAI
-    const agentConfig: any = {
-      openAIApiKey: config.openai.apiKey,
-      operationalMode: 'directExecution',
-    };
-    console.log(`🔑 BusinessCoachingService: API key configured: ${config.openai.apiKey ? 'Yes (***' + config.openai.apiKey.slice(-4) + ')' : 'No'}`);
-
-    // Se estiver usando OpenRouter, configurar baseURL customizada
-    if (config.openai.baseURL !== 'https://api.openai.com/v1') {
-      agentConfig.openAIConfiguration = {
-        baseURL: config.openai.baseURL,
-        defaultQuery: { model: config.openai.model }
-      };
-      console.log(`🔗 BusinessCoachingService: Using OpenRouter with model: ${config.openai.model}`);
-      console.log(`🌐 BusinessCoachingService: Base URL: ${config.openai.baseURL}`);
-    } else {
-      console.log(`🔗 BusinessCoachingService: Using standard OpenAI API`);
-    }
-
+    // Initialize LangChain AI service
     try {
-      console.log('🤖 BusinessCoachingService: Creating HederaConversationalAgent...');
-      this.agent = new HederaConversationalAgent(this.agentSigner, agentConfig);
-
-      console.log('🔄 BusinessCoachingService: Initializing agent...');
-      await this.agent.initialize();
-      console.log('✅ BusinessCoachingService: Agent initialized successfully');
+      console.log('🤖 BusinessCoachingService: Initializing LangChain AI service...');
+      this.aiLLM = createInstance({
+        modelName: config.openai.model,
+        baseURL: config.openai.baseURL,
+        apiKey: config.openai.apiKey
+      });
+      console.log('✅ BusinessCoachingService: LangChain AI service initialized successfully');
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Failed to initialize AI agent:', error);
+      console.error('❌ BusinessCoachingService: Failed to initialize AI service:', error);
       console.log('⚠️  AI features will be disabled, but service will continue running');
     }
   }
@@ -156,8 +141,8 @@ Generate 3-5 goal planning insights focusing on:
 
   async generateBusinessInsights(request: BusinessInsightRequest): Promise<BusinessInsightResponse> {
     try {
-      if (!this.agent) {
-        console.log('⚠️  BusinessCoachingService: AI agent not available - returning fallback insights');
+      if (!this.aiLLM) {
+        console.log('⚠️  BusinessCoachingService: AI service not available - returning fallback insights');
         return this.generateFallbackInsights(request.insightType);
       }
 
@@ -197,9 +182,9 @@ An encouraging, personalized message that acknowledges their journey and motivat
 Keep the tone professional but warm, like a supportive mentor who believes in their success.
 `;
 
-      const response = await this.agent.processMessage(fullPrompt, []);
+      const response = await this.aiLLM.invoke(fullPrompt);
 
-      return this.parseAgentResponse(response.output, request.insightType);
+      return this.parseAgentResponse(response.content, request.insightType);
 
     } catch (error) {
       console.error('❌ BusinessCoachingService: Failed to generate business insights:', error);
@@ -286,23 +271,11 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
     console.log(`📚 BusinessCoachingService: Chat history length: ${chatHistory.length}`);
     
     try {
-      if (!this.agent) {
-        console.log('⚠️  BusinessCoachingService: AI agent not available - returning fallback response');
+      if (!this.aiLLM) {
+        console.log('⚠️  BusinessCoachingService: AI service not available - returning fallback response');
         return this.generateFallbackChatResponse(message, userProfile);
       }
       console.log('✅ BusinessCoachingService: Agent is initialized and ready');
-
-      // Verificar se é uma requisição para gerar missões/metas/insights
-      const isGenRequest = this.isGenerationRequest(message);
-      console.log(`🔍 BusinessCoachingService: Is generation request: ${isGenRequest}`);
-      
-      if (isGenRequest) {
-        console.log('🔄 BusinessCoachingService: Generating mock response for generation request');
-        const mockResponse = this.generateMockResponse(message, userProfile);
-        console.log(`✅ BusinessCoachingService: Mock response generated (length: ${mockResponse.length})`);
-        console.log(`📦 BusinessCoachingService: Mock response preview: ${mockResponse.substring(0, 200)}...`);
-        return mockResponse;
-      }
 
       console.log('🔄 BusinessCoachingService: Creating contextual prompt...');
       const contextPrompt = this.createContextualPrompt(userProfile, 'general_coaching');
@@ -312,7 +285,52 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
 
 User message: "${message}"
 
-Respond as their personal business mentor. Be supportive, practical, and provide actionable advice based on their specific context and goals.`;
+IMPORTANT: If this is a request to generate daily missions, weekly goals, or personalized insights, respond with a valid JSON array only, no additional text or markdown. The JSON should match the exact structure requested.
+
+For daily missions, respond with:
+[
+  {
+    "id": 1,
+    "title": "Mission title",
+    "description": "Detailed description of what to do",
+    "reward": "XP points",
+    "status": "pending",
+    "type": "category",
+    "estimatedTime": "time estimate",
+    "priority": "high/medium/low",
+    "category": "content/social/analytics/strategy/growth"
+  }
+]
+
+For weekly goals, respond with:
+[
+  {
+    "id": 1,
+    "title": "Goal title",
+    "progress": 0,
+    "target": 100,
+    "unit": "measurement unit",
+    "status": "in-progress",
+    "description": "Why this goal matters",
+    "timeline": "This week",
+    "priority": "high/medium/low"
+  }
+]
+
+For personalized insights, respond with:
+[
+  {
+    "id": 1,
+    "type": "tip/opportunity/reminder/warning",
+    "title": "Insight title",
+    "content": "Detailed insight content",
+    "priority": "high/medium/low",
+    "actionable": true,
+    "category": "content/audience/monetization/strategy"
+  }
+]
+
+Otherwise, respond as their personal business mentor. Be supportive, practical, and provide actionable advice based on their specific context and goals.`;
 
       console.log(`📝 BusinessCoachingService: Full prompt created (length: ${fullPrompt.length})`);
       console.log(`🔍 BusinessCoachingService: Full prompt preview: ${fullPrompt.substring(0, 300)}...`);
@@ -320,15 +338,15 @@ Respond as their personal business mentor. Be supportive, practical, and provide
       console.log('🚀 BusinessCoachingService: Sending message to agent...');
       console.log(`📊 BusinessCoachingService: Agent processMessage called with chatHistory length: ${chatHistory.length}`);
       
-      const response = await this.agent.processMessage(fullPrompt, chatHistory);
+      const response = await this.aiLLM.invoke(fullPrompt);
       
       console.log('✅ BusinessCoachingService: Agent response received');
       console.log(`📦 BusinessCoachingService: Response type: ${typeof response}`);
       console.log(`📦 BusinessCoachingService: Response keys: ${Object.keys(response)}`);
-      console.log(`📝 BusinessCoachingService: Response output length: ${response.output?.length || 0}`);
-      console.log(`📝 BusinessCoachingService: Response output preview: ${response.output?.substring(0, 200) || 'No output'}...`);
+      console.log(`📝 BusinessCoachingService: Response output length: ${response.content?.length || 0}`);
+      console.log(`📝 BusinessCoachingService: Response output preview: ${response.content?.substring(0, 200) || 'No output'}...`);
       
-      return response.output;
+      return response.content;
 
     } catch (error) {
       console.error('❌ BusinessCoachingService: Chat response error:', error);
@@ -343,174 +361,8 @@ Respond as their personal business mentor. Be supportive, practical, and provide
   private generateFallbackChatResponse(message: string, userProfile: UserProfile): string {
     console.log('🔄 BusinessCoachingService: Generating fallback chat response');
     
-    if (this.isGenerationRequest(message)) {
-      console.log('🔄 BusinessCoachingService: Generating mock response for generation request');
-      return this.generateMockResponse(message, userProfile);
-    }
-    
     const fallbackResponse = `I understand you're working on your ${userProfile.business.industry} business. While our AI features are being configured, I'd recommend focusing on connecting with your target audience (${userProfile.business.target_audience?.age_range || 'your ideal customers'}) and addressing their main pain point: ${userProfile.business.target_audience?.pain_points || 'their key challenges'}. This aligns with your goal of ${userProfile.personal.success_definition || 'building a successful business'}. We'll have enhanced AI coaching features available soon!`;
     console.log(`✅ BusinessCoachingService: Fallback response generated (length: ${fallbackResponse.length})`);
     return fallbackResponse;
-  }
-
-  private isGenerationRequest(message: string): boolean {
-    console.log('🔍 BusinessCoachingService.isGenerationRequest: Checking message type');
-    console.log(`📝 BusinessCoachingService: Input message: "${message}"`);
-    
-    const generationKeywords = [
-      'generate 3 specific daily missions',
-      'generate 3 weekly goals', 
-      'generate 3 personalized ai insights',
-      'daily missions',
-      'weekly goals',
-      'personalized insights'
-    ];
-    
-    console.log(`🔍 BusinessCoachingService: Checking against ${generationKeywords.length} keywords`);
-    
-    const isGeneration = generationKeywords.some(keyword => {
-      const matches = message.toLowerCase().includes(keyword.toLowerCase());
-      if (matches) {
-        console.log(`✅ BusinessCoachingService: Matched keyword: "${keyword}"`);
-      }
-      return matches;
-    });
-    
-    console.log(`🔍 BusinessCoachingService: Is generation request: ${isGeneration}`);
-    return isGeneration;
-  }
-
-  private generateMockResponse(message: string, userProfile: UserProfile): string {
-    console.log('🔄 BusinessCoachingService.generateMockResponse: Starting mock response generation');
-    console.log(`📝 BusinessCoachingService: Mock request message: "${message}"`);
-    console.log(`👤 BusinessCoachingService: User profile for mock - Industry: ${userProfile.business.industry}`);
-    
-    const { personal, business } = userProfile;
-    
-    if (message.toLowerCase().includes('daily missions')) {
-      console.log('📋 BusinessCoachingService: Generating DAILY MISSIONS mock response');
-      const dailyMissions = JSON.stringify([
-        {
-          "id": 1,
-          "title": `Connect with ${business.target_audience?.age_range || 'your audience'}`,
-          "description": `Engage with 3 potential customers in ${business.industry} who struggle with ${business.target_audience?.pain_points || 'common challenges'}`,
-          "reward": "50 XP",
-          "status": "pending",
-          "type": "social",
-          "estimatedTime": "15 min",
-          "priority": "high",
-          "category": "social"
-        },
-        {
-          "id": 2,
-          "title": "Create valuable content",
-          "description": `Write a post addressing ${personal.biggest_challenge || 'your main challenge'} for ${business.industry} professionals`,
-          "reward": "100 XP", 
-          "status": "pending",
-          "type": "content",
-          "estimatedTime": "30 min",
-          "priority": "high",
-          "category": "content"
-        },
-        {
-          "id": 3,
-          "title": "Review your progress",
-          "description": `Analyze what's working toward your goal: ${personal.success_definition || 'building your business'}`,
-          "reward": "75 XP",
-          "status": "pending",
-          "type": "analytics", 
-          "estimatedTime": "20 min",
-          "priority": "medium",
-          "category": "analytics"
-        }
-      ]);
-      console.log(`✅ BusinessCoachingService: Daily missions generated (length: ${dailyMissions.length})`);
-      console.log(`📦 BusinessCoachingService: Daily missions preview: ${dailyMissions.substring(0, 150)}...`);
-      return dailyMissions;
-    }
-    
-    if (message.toLowerCase().includes('weekly goals')) {
-      console.log('📊 BusinessCoachingService: Generating WEEKLY GOALS mock response');
-      const weeklyGoals = JSON.stringify([
-        {
-          "id": 1,
-          "title": `Grow ${business.industry} network`,
-          "progress": 20,
-          "target": 100,
-          "unit": "connections",
-          "status": "in-progress",
-          "description": `Building relationships in ${business.industry} to achieve ${personal.success_definition}`,
-          "timeline": "This week",
-          "priority": "high"
-        },
-        {
-          "id": 2,
-          "title": "Content creation streak", 
-          "progress": 2,
-          "target": 5,
-          "unit": "posts",
-          "status": "in-progress",
-          "description": `Consistent content addressing ${business.target_audience?.pain_points || 'audience needs'}`,
-          "timeline": "This week",
-          "priority": "high"
-        },
-        {
-          "id": 3,
-          "title": "Overcome key challenge",
-          "progress": 30,
-          "target": 100,
-          "unit": "progress",
-          "status": "in-progress", 
-          "description": `Making progress on: ${personal.biggest_challenge || 'your main challenge'}`,
-          "timeline": "This week",
-          "priority": "medium"
-        }
-      ]);
-      console.log(`✅ BusinessCoachingService: Weekly goals generated (length: ${weeklyGoals.length})`);
-      console.log(`📦 BusinessCoachingService: Weekly goals preview: ${weeklyGoals.substring(0, 150)}...`);
-      return weeklyGoals;
-    }
-    
-    if (message.toLowerCase().includes('personalized insights') || message.toLowerCase().includes('personalized ai insights')) {
-      console.log('💡 BusinessCoachingService: Generating PERSONALIZED INSIGHTS mock response');
-      const insights = JSON.stringify([
-        {
-          "id": 1,
-          "type": "opportunity",
-          "title": `${business.industry} Market Opportunity`,
-          "content": `There's growing demand in ${business.industry} for solutions to ${business.target_audience?.pain_points || 'common challenges'}. Your ${personal.core_values && Array.isArray(personal.core_values) ? personal.core_values[0] || 'authentic' : 'authentic'} approach can differentiate you.`,
-          "priority": "high",
-          "actionable": true,
-          "category": "strategy"
-        },
-        {
-          "id": 2,
-          "type": "tip",
-          "title": "Address Your Main Challenge",
-          "content": `To overcome ${personal.biggest_challenge || 'your main challenge'}, consider leveraging your ${personal.work_style || 'unique work style'} and focusing on ${business.target_audience?.goals_aspirations || 'what your audience wants to achieve'}.`,
-          "priority": "high", 
-          "actionable": true,
-          "category": "content"
-        },
-        {
-          "id": 3,
-          "type": "reminder",
-          "title": "Stay Aligned with Your Vision",
-          "content": `Remember your goal: ${personal.success_definition || 'building a successful business'}. Every action should move you closer to ${personal.impact_goal || 'your desired impact'}.`,
-          "priority": "medium",
-          "actionable": true,
-          "category": "strategy"
-        }
-      ]);
-      console.log(`✅ BusinessCoachingService: Personalized insights generated (length: ${insights.length})`);
-      console.log(`📦 BusinessCoachingService: Insights preview: ${insights.substring(0, 150)}...`);
-      return insights;
-    }
-    
-    console.log('🔀 BusinessCoachingService: Generating GENERAL mock response');
-    const generalResponse = `Based on your profile in ${business.industry}, focusing on ${business.target_audience?.age_range || 'your target audience'}, I recommend taking action on ${personal.biggest_challenge || 'your main challenge'} to achieve ${personal.success_definition || 'your goals'}.`;
-    console.log(`✅ BusinessCoachingService: General response generated (length: ${generalResponse.length})`);
-    console.log(`📦 BusinessCoachingService: General response: ${generalResponse}`);
-    return generalResponse;
   }
 } 

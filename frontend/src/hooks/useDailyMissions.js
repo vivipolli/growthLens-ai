@@ -1,267 +1,308 @@
-import { useState, useEffect, useCallback } from 'react';
-import { businessCoachingService } from '../services/businessCoachingService.js';
-
-const MISSIONS_STORAGE_KEY = 'daily_missions';
-const MISSIONS_DATE_KEY = 'daily_missions_date';
+import { useState, useEffect } from 'react'
+import { businessCoachingService } from '../services/businessCoachingService'
+import { apiCall } from '../utils/api.js'
 
 export const useDailyMissions = () => {
-  const [missions, setMissions] = useState([]);
-  const [weeklyGoals, setWeeklyGoals] = useState([]);
-  const [aiInsights, setAiInsights] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastGenerated, setLastGenerated] = useState(null);
-  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  const [dailyMissions, setDailyMissions] = useState([])
+  const [weeklyGoals, setWeeklyGoals] = useState([])
+  const [aiInsights, setAiInsights] = useState([])
+  const [error, setError] = useState(null)
+  const [lastGenerated, setLastGenerated] = useState(null)
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
 
-  // Remove default data - only show real API data
-  const defaultMissions = [];
-  const defaultWeeklyGoals = [];
-  const defaultInsights = [];
+  // Loading states for individual sections
+  const [missionsLoading, setMissionsLoading] = useState(false)
+  const [goalsLoading, setGoalsLoading] = useState(false)
+  const [insightsLoading, setInsightsLoading] = useState(false)
 
-  const isToday = (dateString) => {
-    if (!dateString) return false;
-    const today = new Date().toDateString();
-    const stored = new Date(dateString).toDateString();
-    return today === stored;
-  };
+  // Get user data from blockchain
+  const personalData = JSON.parse(localStorage.getItem('personalOnboardingAnswers') || '{}')
+  const userId = personalData.name || 'anonymous'
 
-  const loadStoredMissions = useCallback(() => {
+  const loadMissionsFromBlockchain = async () => {
+    if (!userId || userId === 'anonymous') return
+
     try {
-      const storedMissions = localStorage.getItem(MISSIONS_STORAGE_KEY);
-      const storedDate = localStorage.getItem(MISSIONS_DATE_KEY);
+      console.log('🔄 Loading missions from blockchain for:', userId)
+      const response = await businessCoachingService.getUserDataFromBlockchain(userId)
       
-      console.log('📂 Checking stored missions...');
-      console.log('📅 Stored date:', storedDate);
-      console.log('📊 Stored missions exist:', !!storedMissions);
-      console.log('📊 Is today:', storedDate ? isToday(storedDate) : false);
-      
-      if (storedMissions && storedDate && isToday(storedDate)) {
-        const parsed = JSON.parse(storedMissions);
-        console.log('✅ Loading stored data:', parsed);
-        console.log('📋 Stored insights:', parsed.aiInsights);
-        setMissions(parsed.missions || []);
-        setWeeklyGoals(parsed.weeklyGoals || []);
-        setAiInsights(parsed.aiInsights || []);
-        setLastGenerated(new Date(storedDate));
-        return true;
-      }
-      console.log('❌ No valid stored data found, will generate fresh data');
-      return false;
-    } catch (error) {
-      console.error('Error loading stored missions:', error);
-      return false;
-    }
-  }, []);
-
-  const saveMissions = useCallback((missionsData, goals, insights) => {
-    try {
-      const data = {
-        missions: missionsData,
-        weeklyGoals: goals,
-        aiInsights: insights
-      };
-      localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(data));
-      localStorage.setItem(MISSIONS_DATE_KEY, new Date().toISOString());
-    } catch (error) {
-      console.error('Error saving missions:', error);
-    }
-  }, []);
-
-  const parseAIResponse = (apiResponse) => {
-    try {
-      // If the response has an 'output' field, extract it
-      let responseText = apiResponse;
-      if (apiResponse && typeof apiResponse === 'object' && apiResponse.output) {
-        responseText = apiResponse.output;
-        console.log('📦 Extracted output from API response:', responseText);
-      }
-      
-      // If responseText is already an array, return it directly
-      if (Array.isArray(responseText)) {
-        return responseText;
-      }
-      
-      // If responseText is a string, try to parse it
-      if (typeof responseText === 'string') {
-        const cleanedResponse = responseText
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .replace(/^\s*[\w\s]*:/gm, '')
-          .trim();
+      if (response.success && response.data) {
+        console.log('✅ Loaded data from blockchain:', response.data)
         
-        let startIndex = cleanedResponse.indexOf('[');
-        let endIndex = cleanedResponse.lastIndexOf(']') + 1;
+        // Extract missions from blockchain data
+        const blockchainData = response.data
         
-        if (startIndex !== -1 && endIndex !== -1) {
-          const jsonString = cleanedResponse.slice(startIndex, endIndex);
-          return JSON.parse(jsonString);
+        // Use AI insights from blockchain if available
+        if (blockchainData.aiInsights && blockchainData.aiInsights.length > 0) {
+          setAiInsights(blockchainData.aiInsights)
         }
         
-        return JSON.parse(cleanedResponse);
+        // For now, we'll still use the API for daily missions and weekly goals
+        // as they are generated dynamically by AI
+        console.log('📊 Blockchain data loaded:', {
+          userProfile: !!blockchainData.userProfile,
+          businessData: !!blockchainData.businessData,
+          aiInsights: blockchainData.aiInsights?.length || 0,
+          missionCompletions: blockchainData.missionCompletions?.length || 0
+        })
       }
-      
-      return responseText;
     } catch (error) {
-      console.error('Error parsing AI response:', error);
-      console.error('Raw response was:', apiResponse);
-      return null;
+      console.error('❌ Error loading blockchain data:', error)
     }
-  };
+  }
 
-  const generateAIMissions = useCallback(async () => {
-    console.log('🔄 generateAIMissions called');
-    setLoading(true);
-    setError(null);
-    setHasAttemptedLoad(true);
-    
+  // Generate Daily Missions
+  const generateDailyMissions = async () => {
+    if (!personalData.name) {
+      setError('Please complete your onboarding first')
+      return
+    }
+
+    setMissionsLoading(true)
+    setError(null)
+
     try {
-      console.log('📡 Starting API calls...');
-      const [missionsResponse, goalsResponse, insightsResponse] = await Promise.allSettled([
-        businessCoachingService.generateDailyMissions(),
-        businessCoachingService.generateWeeklyGoals(),
-        businessCoachingService.generatePersonalizedInsights()
-      ]);
+      console.log('🎯 Generating daily missions...')
+      const response = await businessCoachingService.generateDailyMissions()
+      
+      console.log('📥 Daily missions API Response:', response)
 
-      console.log('📡 API responses:', { missionsResponse, goalsResponse, insightsResponse });
-
-      let newMissions = [];
-      let newGoals = [];
-      let newInsights = [];
-
-      if (missionsResponse.status === 'fulfilled') {
-        console.log('✅ Missions response fulfilled:', missionsResponse.value);
-        const parsedMissions = parseAIResponse(missionsResponse.value);
-        if (parsedMissions && Array.isArray(parsedMissions)) {
-          newMissions = parsedMissions;
-          console.log('✅ Parsed missions:', newMissions);
-        }
-      } else {
-        console.error('❌ Missions failed:', missionsResponse.reason);
+      let responseData = response
+      if (response.success && response.data) {
+        responseData = response.data
+      } else if (response.insights) {
+        responseData = response
       }
 
-      if (goalsResponse.status === 'fulfilled') {
-        console.log('✅ Goals response fulfilled:', goalsResponse.value);
-        const parsedGoals = parseAIResponse(goalsResponse.value);
-        if (parsedGoals && Array.isArray(parsedGoals)) {
-          newGoals = parsedGoals;
-          console.log('✅ Parsed goals:', newGoals);
-        }
+      if (responseData && responseData.insights) {
+        console.log('✅ Daily missions generated successfully:', responseData)
+        
+        const insights = responseData.insights || []
+        console.log('📊 Converting insights to missions:', insights.length)
+        
+        const missions = insights.map((insight, index) => ({
+          id: index + 1,
+          title: insight.title,
+          description: insight.content,
+          status: 'pending',
+          type: insight.category || 'strategy',
+          estimatedTime: insight.timeline || '15-60 min',
+          priority: insight.priority || 'medium',
+          category: insight.category || 'strategy'
+        }))
+        
+        console.log('🎯 Setting missions:', missions.length)
+        setDailyMissions(missions)
+        setLastGenerated(new Date().toISOString())
       } else {
-        console.error('❌ Goals failed:', goalsResponse.reason);
+        console.error('❌ Invalid daily missions response format:', responseData)
+        setError('Invalid response format from daily missions API')
       }
-
-      if (insightsResponse.status === 'fulfilled') {
-        console.log('✅ Insights response fulfilled:', insightsResponse.value);
-        const parsedInsights = parseAIResponse(insightsResponse.value);
-        if (parsedInsights && Array.isArray(parsedInsights)) {
-          newInsights = parsedInsights;
-          console.log('✅ Parsed insights:', newInsights);
-        } else {
-          console.warn('⚠️ Invalid insights format, using empty array:', parsedInsights);
-        }
-      } else {
-        console.error('❌ Insights failed:', insightsResponse.reason);
-      }
-
-      setMissions(newMissions);
-      setWeeklyGoals(newGoals);
-      setAiInsights(newInsights);
-      
-      saveMissions(newMissions, newGoals, newInsights);
-      setLastGenerated(new Date());
-      
-      console.log('✅ All missions updated successfully');
-      
-    } catch (err) {
-      console.error('❌ Error generating AI missions:', err);
-      setError('Failed to generate personalized missions. Please try refreshing.');
-      setMissions([]);
-      setWeeklyGoals([]);
-      setAiInsights([]);
+    } catch (error) {
+      console.error('❌ Error generating daily missions:', error)
+      setError(error.message || 'Failed to generate daily missions')
     } finally {
-      setLoading(false);
+      setMissionsLoading(false)
     }
-  }, [saveMissions]);
+  }
 
-  const completeMission = useCallback((missionId) => {
-    setMissions(prev => {
-      const updated = prev.map(mission => 
+  // Generate Weekly Goals
+  const generateWeeklyGoals = async () => {
+    if (!personalData.name) {
+      setError('Please complete your onboarding first')
+      return
+    }
+
+    setGoalsLoading(true)
+    setError(null)
+
+    try {
+      console.log('📈 Generating weekly goals...')
+      const response = await businessCoachingService.generateWeeklyGoals()
+      
+      console.log('📥 Weekly goals API Response:', response)
+
+      let responseData = response
+      if (response.success && response.data) {
+        responseData = response.data
+      } else if (response.insights) {
+        responseData = response
+      }
+
+      if (responseData && responseData.insights) {
+        console.log('✅ Weekly goals generated successfully:', responseData)
+        
+        const insights = responseData.insights || []
+        console.log('📊 Converting insights to goals:', insights.length)
+        
+        const goals = insights.map((insight, index) => ({
+          id: index + 1,
+          title: insight.title,
+          progress: 0,
+          target: 100,
+          unit: 'completion',
+          status: 'in-progress',
+          description: insight.content,
+          timeline: insight.timeline || 'This week',
+          priority: insight.priority || 'medium'
+        }))
+        
+        console.log('📈 Setting goals:', goals.length)
+        setWeeklyGoals(goals)
+        setLastGenerated(new Date().toISOString())
+      } else {
+        console.error('❌ Invalid weekly goals response format:', responseData)
+        setError('Invalid response format from weekly goals API')
+      }
+    } catch (error) {
+      console.error('❌ Error generating weekly goals:', error)
+      setError(error.message || 'Failed to generate weekly goals')
+    } finally {
+      setGoalsLoading(false)
+    }
+  }
+
+  // Generate AI Insights
+  const generateAIInsights = async () => {
+    if (!personalData.name) {
+      setError('Please complete your onboarding first')
+      return
+    }
+
+    setInsightsLoading(true)
+    setError(null)
+
+    try {
+      console.log('💡 Generating AI insights...')
+      const response = await businessCoachingService.generateAIInsights()
+      
+      console.log('📥 AI insights API Response:', response)
+
+      let responseData = response
+      if (response.success && response.data) {
+        responseData = response.data
+      } else if (response.insights) {
+        responseData = response
+      }
+
+      if (responseData && responseData.insights) {
+        console.log('✅ AI insights generated successfully:', responseData)
+        
+        const insights = responseData.insights || []
+        console.log('📊 Setting AI insights:', insights.length)
+        
+        setAiInsights(insights)
+        setLastGenerated(new Date().toISOString())
+      } else {
+        console.error('❌ Invalid AI insights response format:', responseData)
+        setError('Invalid response format from AI insights API')
+      }
+    } catch (error) {
+      console.error('❌ Error generating AI insights:', error)
+      setError(error.message || 'Failed to generate AI insights')
+    } finally {
+      setInsightsLoading(false)
+    }
+  }
+
+  // Generate all data (for initial load)
+  const generateAllData = async () => {
+    if (!personalData.name) {
+      setError('Please complete your onboarding first')
+      return
+    }
+
+    setError(null)
+    setHasAttemptedLoad(true)
+
+    try {
+      console.log('🔄 Generating all data...')
+      
+      // Generate all sections in parallel
+      await Promise.all([
+        generateDailyMissions(),
+        generateWeeklyGoals(),
+        generateAIInsights()
+      ])
+      
+      console.log('✅ All data generated successfully')
+    } catch (error) {
+      console.error('❌ Error generating all data:', error)
+      setError(error.message || 'Failed to generate data')
+    }
+  }
+
+  // Helper functions for mission counts
+  const getCompletedMissionsCount = () => {
+    return dailyMissions.filter(mission => mission.status === 'completed').length
+  }
+
+  const getTotalMissionsCount = () => {
+    return dailyMissions.length
+  }
+
+  const completeMission = (missionId) => {
+    setDailyMissions(prevMissions => 
+      prevMissions.map(mission => 
         mission.id === missionId 
           ? { ...mission, status: 'completed' }
           : mission
-      );
-      
-      const goals = weeklyGoals;
-      const insights = aiInsights;
-      saveMissions(updated, goals, insights);
-      return updated;
-    });
-  }, [weeklyGoals, aiInsights, saveMissions]);
+      )
+    )
+  }
 
-  const updateGoalProgress = useCallback((goalId, newProgress) => {
-    setWeeklyGoals(prev => {
-      const updated = prev.map(goal => 
+  const updateGoalProgress = (goalId) => {
+    setWeeklyGoals(prevGoals => 
+      prevGoals.map(goal => 
         goal.id === goalId 
-          ? { ...goal, progress: newProgress }
+          ? { ...goal, progress: Math.min(goal.progress + 1, goal.target) }
           : goal
-      );
-      
-      const missionsData = missions;
-      const insights = aiInsights;
-      saveMissions(missionsData, updated, insights);
-      return updated;
-    });
-  }, [missions, aiInsights, saveMissions]);
+      )
+    )
+  }
+
+  const clearCache = () => {
+    setDailyMissions([])
+    setWeeklyGoals([])
+    setAiInsights([])
+    setError(null)
+    console.log('🗑️ Cache cleared')
+  }
 
   useEffect(() => {
-    const hasStoredData = loadStoredMissions();
-    setHasAttemptedLoad(true);
+    // Load blockchain data first
+    loadMissionsFromBlockchain()
     
-    // Don't load default data - let it remain empty until API call
-    if (!hasStoredData) {
-      console.log('📭 No stored data found, waiting for API call...');
-    }
-  }, [loadStoredMissions]);
-
-  const refreshMissions = useCallback(() => {
-    console.log('🔄 refreshMissions called');
-    generateAIMissions();
-  }, [generateAIMissions]);
-
-  const clearCache = useCallback(() => {
-    console.log('🗑️ Clearing missions cache...');
-    localStorage.removeItem(MISSIONS_STORAGE_KEY);
-    localStorage.removeItem(MISSIONS_DATE_KEY);
-    setMissions([]);
-    setWeeklyGoals([]);
-    setAiInsights([]);
-    setLastGenerated(null);
-    console.log('✅ Cache cleared, generating fresh missions...');
-    generateAIMissions();
-  }, [generateAIMissions]);
-
-  const getCompletedMissionsCount = useCallback(() => {
-    return missions.filter(mission => mission.status === 'completed').length;
-  }, [missions]);
-
-  const getTotalMissionsCount = useCallback(() => {
-    return missions.length;
-  }, [missions]);
+    // Set hasAttemptedLoad to true since we're not auto-generating
+    setHasAttemptedLoad(true)
+    
+    // Don't auto-generate data - let user click individual refresh buttons
+    console.log('🔄 Hook: Blockchain data loaded, ready for individual generation')
+  }, [personalData.name])
 
   return {
-    missions,
+    missions: dailyMissions,
     weeklyGoals,
     aiInsights,
-    loading,
     error,
     lastGenerated,
     hasAttemptedLoad,
+    // Individual loading states
+    missionsLoading,
+    goalsLoading,
+    insightsLoading,
+    // Individual refresh functions
+    generateDailyMissions,
+    generateWeeklyGoals,
+    generateAIInsights,
+    // Legacy functions for compatibility
+    generateMissions: generateAllData,
+    generateAIMissions: generateAllData,
+    refreshMissions: generateAllData,
+    getCompletedMissionsCount,
+    getTotalMissionsCount,
     completeMission,
     updateGoalProgress,
-    generateAIMissions,
-    refreshMissions,
-    clearCache,
-    getCompletedMissionsCount,
-    getTotalMissionsCount
-  };
-}; 
+    clearCache
+  }
+} 

@@ -46,6 +46,11 @@ export const apiEndpoints = {
     generateInsights: '/api/business/insights/generate',
     saveProfile: '/api/business/profile/save',
     getProfile: '/api/business/profile',
-    recommendations: '/api/business/recommendations'
+    recommendations: '/api/business/recommendations',
+    saveUserProfile: '/api/business/profile/save',
+    saveBusinessData: '/api/business/business/save',
+    saveMissionCompletion: '/api/business/mission/save',
+    getUserData: '/api/business/user/:userId/data',
+    getTopicInfo: '/api/business/user/:userId/topic'
   }
 }; 

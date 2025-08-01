@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { config, validateEnvironment } from './config/environment';
 import { agentRoutes, agentService } from './routes/agentRoutes';
 import { businessRoutes, businessCoachingService } from './routes/businessRoutes';
-import { authRoutes, authService } from './routes/authRoutes';
+import { authRoutes } from './routes/authRoutes';
 
 async function startServer() {
   console.log('🚀 Starting Hedera AI Business Coaching Platform...');
@@ -24,8 +24,13 @@ async function startServer() {
     app.use(helmet());
     console.log('✅ Helmet security middleware configured');
     
-    app.use(cors());
-    console.log('✅ CORS middleware configured');
+    app.use(cors({
+      origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization']
+    }));
+    console.log('✅ CORS middleware configured for frontend');
     
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true }));

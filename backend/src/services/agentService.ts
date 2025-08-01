@@ -36,11 +36,7 @@ export class AgentService {
       if (config.openai.baseURL !== 'https://api.openai.com/v1') {
         agentConfig.openAIConfiguration = {
           baseURL: config.openai.baseURL,
-          defaultQuery: { model: config.openai.model },
-          headers: {
-            'HTTP-Referer': 'https://github.com/your-repo', // OpenRouter requer
-            'X-Title': 'Hedera Growth App' // OpenRouter requer
-          }
+          defaultQuery: { model: config.openai.model }
         };
         console.log(`🔗 AgentService usando OpenRouter com modelo: ${config.openai.model}`);
       }

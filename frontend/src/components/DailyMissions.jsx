@@ -108,15 +108,15 @@ const DailyMissions = () => {
         }))
     }
 
-    const completedMissions = missions.filter(m => m.status === 'completed').length
-    const totalMissions = missions.length
+    const completedMissions = missions?.filter(m => m.status === 'completed').length || 0
+    const totalMissions = missions?.length || 0
 
     return (
         <Card>
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h2 className="text-xl font-bold text-gray-900">Daily Missions</h2>
-                    <p className="text-sm text-gray-600">Complete tasks to earn XP and level up</p>
+                    <p className="text-sm text-gray-600">Complete tasks to grow your business</p>
                 </div>
                 <div className="text-right">
                     <div className="text-2xl font-bold text-purple-600">{completedMissions}/{totalMissions}</div>
@@ -139,7 +139,7 @@ const DailyMissions = () => {
             </div>
 
             <div className="space-y-4">
-                {missions.map((mission) => (
+                {missions?.map((mission) => (
                     <div
                         key={mission.id}
                         className={`p-4 rounded-xl border-2 transition-all ${mission.status === 'completed'
@@ -192,7 +192,6 @@ const DailyMissions = () => {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-4 text-xs text-gray-500">
                                         <span>⏱ {mission.estimatedTime}</span>
-                                        <span className="text-purple-600 font-medium">{mission.reward}</span>
                                     </div>
 
                                     {/* Action Buttons */}

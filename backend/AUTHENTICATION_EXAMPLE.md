@@ -197,7 +197,80 @@ PORT=3001
 
 ## **🚀 Próximos Passos**
 
-1. **Implementar Topics** para armazenamento real na blockchain
+1. **Implementar A transaction that creates a new topic recognized by the Hedera network. The newly generated topic can be referenced by its topicId. The topicId is used to identify a unique topic to submit messages to. You can obtain the new topic ID by requesting the receipt of the transaction. All messages within a topic are sequenced with respect to one another and are provided a unique sequence number.
+
+Note
+
+With the Consensus Node Release v0.60, you can set an auto renew account ID without the requirement of setting an admin key on the topic.
+
+Private topic
+You can also create a private topic where only authorized parties can submit messages to that topic. To create a private topic you would need to set the submitKey property of the transaction. The submitKey value is then shared with the authorized parties and is required to successfully submit messages to the private topic.
+
+Topic Properties
+Field
+Description
+Admin Key
+
+Access control for updateTopic/deleteTopic. If no adminKey is specified, anyone can increase the topic's expirationTime with updateTopic, but they cannot use deleteTopic. However, if an adminKey is specified, both updateTopic and deleteTopic can be used.
+
+Submit Key
+
+Access control for submitMessage. No access control will be performed specified, allowing all message submissions.
+
+Topic Memo
+
+Store the new topic with a short publicly visible memo. (100 bytes)
+
+Auto Renew Account
+
+At the topic's expirationTime, the optional account can be used to extend the lifetime up to a maximum of the autoRenewPeriod or duration/amount that all funds on the account can extend (whichever is the smaller).
+
+Currently, rent is not enforced for topics so no auto-renew payments will be made.
+
+Note: If the developer does not explicitly set autoRenewAccount, the SDK will automatically default to using the transaction fee payer account ID for the auto renew account. This is beneficial in the event an admin key is not set.
+
+Auto Renew Period
+
+The initial lifetime of the topic and the amount of time to attempt to extend the topic's lifetime by automatically at the topic's expirationTime. Currently, rent is not enforced for topics so auto-renew payments will not be made.
+
+NOTE: The minimum period of time is approximately 30 days (2592000 seconds) and the maximum period of time is approximately 92 days (8000001 seconds). Any other value outside of this range will return the following error: AUTORENEW_DURATION_NOT_IN_RANGE.
+
+Fee Schedule Key
+
+(Optional) A key that controls updates and deletions of topic fees. Must be set at creation; cannot be added later via updateTopic.
+
+Fee Exempt Keys
+
+(Optional) A list of keys that, if used to sign a message submission, allow the sender to bypass fees. Can be updated later via updateTopic.
+
+Custom Fees
+
+(Optional) A fee structure applied to message submissions for revenue generation. Can be updated later via updateTopic, but must be signed by the Fee Schedule Key.
+Defines a fixed fee required for each message submission to the topic. This fee can be set in HBAR or HTS fungible tokens and applies when messages are submitted.
+
+Transaction Signing Requirements:
+
+If an Admin Key is specified, the Admin Key must sign the transaction.
+
+If no Admin Key is specified, the topic is immutable.
+
+If an Auto Renew Account is specified, that account must also sign this transaction.
+
+If a Fee Schedule Key is specified, the Fee Schedule Key must sign the transaction.
+
+If a Fee Exempt Key List is specified, it contains a list of public keys that are exempt from paying fees when submitting messages to the topic. These keys do not need to sign the transaction.
+
+Transaction Fees
+
+Each transaction incurs a standard Hedera network fee based on network resource usage.
+
+If a custom fee is set for a topic, users submitting messages must pay this fee in HBAR or HTS tokens.
+
+The Fee Schedule Key allows authorized users to update fee structures. If set, it must sign transactions modifying fees.
+
+Fee exemptions can be granted using the Fee Exempt Key List.
+
+Use the Hedera Fee Estimator to estimate standard network fees.s** para armazenamento real na blockchain
 2. **Adicionar Smart Contracts** para lógica de negócio
 3. **Integrar Wallet Connect** para self-custody
 4. **Implementar NFTs** para certificados e conquistas

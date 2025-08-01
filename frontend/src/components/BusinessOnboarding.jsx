@@ -2,11 +2,27 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import { Card, StepItem, AIMentor, Button } from './index'
 import { useNavigate } from 'react-router-dom'
+import { businessCoachingService } from '../services/businessCoachingService'
 
 const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isEditMode = false }) => {
     const [currentStep, setCurrentStep] = useState(0)
     const [completedSteps, setCompletedSteps] = useState([])
-    const [answers, setAnswers] = useState(() => initialAnswers || {})
+    const [answers, setAnswers] = useState(() => {
+        // Always try to load from localStorage first
+        try {
+            const data = localStorage.getItem('businessOnboardingAnswers')
+            if (data) {
+                const parsedData = JSON.parse(data)
+                console.log('📂 Loaded business data from localStorage:', parsedData)
+                return parsedData
+            }
+        } catch (error) {
+            console.error('❌ Error loading business data from localStorage:', error)
+        }
+
+        // Fallback to initialAnswers or empty object
+        return initialAnswers || {}
+    })
     const { gradients } = useTheme()
     const navigate = useNavigate()
 
@@ -64,15 +80,32 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
     const saveAnswers = (answers) => {
         // Save to localStorage for now
         localStorage.setItem('businessOnboardingAnswers', JSON.stringify(answers))
+        console.log('💾 Saved business data to localStorage:', answers)
+
+        // Save to blockchain
+        try {
+            const userId = personalData?.name || 'anonymous'
+            businessCoachingService.saveBusinessDataToBlockchain(userId, answers)
+                .then(response => {
+                    if (response.success) {
+                        console.log('✅ Business data saved to blockchain:', response)
+                        if (response.transactionId) {
+                            console.log(`🔗 HashScan URL: ${response.hashscanUrl}`)
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Failed to save business data to blockchain:', error)
+                })
+        } catch (error) {
+            console.error('❌ Error saving to blockchain:', error)
+        }
+
         // Future: send to AI agent or blockchain here
         // Example:
         // sendToAIAgent(answers)
         // saveToBlockchain(answers)
     }
-
-    useEffect(() => {
-        saveAnswers(answers)
-    }, [answers])
 
     const journeySteps = [
         {
@@ -323,10 +356,13 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
     ]
 
     const handleAnswerChange = (questionId, value) => {
-        setAnswers(prev => ({
-            ...prev,
+        const newAnswers = {
+            ...answers,
             [questionId]: value
-        }))
+        }
+        setAnswers(newAnswers)
+        // Save to localStorage immediately
+        saveAnswers(newAnswers)
     }
 
     const isStepComplete = (step) => {
@@ -572,7 +608,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                                 <span className="text-2xl">📱</span>
                                             </div>
                                             <h4 className="font-semibold text-gray-900 mb-2">Daily Missions</h4>
-                                            <p className="text-sm text-gray-600">Complete daily tasks to earn XP and grow your business</p>
+                                            <p className="text-sm text-gray-600">Complete daily tasks to grow your business</p>
                                         </div>
                                         <div className="text-center">
                                             <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mx-auto mb-3">

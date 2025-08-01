@@ -2,6 +2,7 @@ import { apiCall, apiEndpoints } from '../utils/api.js';
 import { getUserProfile } from '../utils/userProfile.js';
 
 export const businessCoachingService = {
+  // Daily Missions API
   async generateDailyMissions() {
     console.log('🎯 generateDailyMissions service called');
     const userProfile = getUserProfile();
@@ -13,59 +14,28 @@ export const businessCoachingService = {
 
     console.log('✅ User profile found:', userProfile);
 
-    const prompt = `Based on the user's profile and business stage, generate 3 specific daily missions that will help them progress. 
-
-IMPORTANT: Respond with a valid JSON array only, no additional text or markdown.
-
-The JSON should have this exact structure:
-[
-  {
-    "id": 1,
-    "title": "Mission title",
-    "description": "Detailed description of what to do",
-    "reward": "XP points",
-    "status": "pending",
-    "type": "category",
-    "estimatedTime": "time estimate",
-    "priority": "high/medium/low",
-    "category": "content/social/analytics/strategy/growth"
-  }
-]
-
-Create missions that are:
-- Specific to their business stage and challenges
-- Actionable today
-- Aligned with their goals and values
-- Progressive (building on each other)
-- Realistic given their work style and time constraints
-
-Consider their biggest challenge: "${userProfile.personal.biggest_challenge}"
-Focus on: ${userProfile.business.industry}
-Target audience: ${userProfile.business.target_audience.age_range}`;
-
     const payload = {
-      message: prompt,
-      userProfile,
-      chatHistory: []
+      userProfile
     };
 
-    console.log('📡 Making API call to:', apiEndpoints.business.chat);
+    console.log('📡 Making API call to daily-missions');
     console.log('📤 Payload:', payload);
 
     try {
-      const response = await apiCall(apiEndpoints.business.chat, {
+      const response = await apiCall('/api/business/daily-missions', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
       
-      console.log('📥 API response received:', response);
+      console.log('📥 Daily missions API response received:', response);
       return response;
     } catch (error) {
-      console.error('❌ API call failed:', error);
+      console.error('❌ Daily missions API call failed:', error);
       throw error;
     }
   },
 
+  // Weekly Goals API
   async generateWeeklyGoals() {
     console.log('📈 generateWeeklyGoals service called');
     const userProfile = getUserProfile();
@@ -77,49 +47,54 @@ Target audience: ${userProfile.business.target_audience.age_range}`;
 
     console.log('✅ User profile found for goals:', userProfile);
 
-    const prompt = `Based on the user's profile and business goals, generate 3 weekly goals that align with their success definition.
-
-IMPORTANT: Respond with a valid JSON array only, no additional text or markdown.
-
-The JSON should have this exact structure:
-[
-  {
-    "id": 1,
-    "title": "Goal title",
-    "progress": 0,
-    "target": 100,
-    "unit": "measurement unit",
-    "status": "in-progress",
-    "description": "Why this goal matters",
-    "timeline": "This week",
-    "priority": "high/medium/low"
-  }
-]
-
-Create goals that:
-- Support their success definition: "${userProfile.personal.success_definition}"
-- Address their primary motivation: "${userProfile.personal.primary_motivation}"
-- Are measurable and achievable this week
-- Build toward their impact goal: "${userProfile.personal.impact_goal}"`;
-
     const payload = {
-      message: prompt,
-      userProfile,
-      chatHistory: []
+      userProfile
     };
 
-    console.log('📡 Making API call for goals to:', apiEndpoints.business.chat);
+    console.log('📡 Making API call for weekly goals');
 
     try {
-      const response = await apiCall(apiEndpoints.business.chat, {
+      const response = await apiCall('/api/business/weekly-goals', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
       
-      console.log('📥 Goals API response received:', response);
+      console.log('📥 Weekly goals API response received:', response);
       return response;
     } catch (error) {
-      console.error('❌ Goals API call failed:', error);
+      console.error('❌ Weekly goals API call failed:', error);
+      throw error;
+    }
+  },
+
+  // AI Insights API
+  async generateAIInsights() {
+    console.log('💡 generateAIInsights service called');
+    const userProfile = getUserProfile();
+    
+    if (!userProfile) {
+      console.error('❌ User profile not found');
+      throw new Error('User profile not found. Please complete your onboarding first.');
+    }
+
+    console.log('✅ User profile found for insights:', userProfile);
+
+    const payload = {
+      userProfile
+    };
+
+    console.log('📡 Making API call for AI insights');
+
+    try {
+      const response = await apiCall('/api/business/ai-insights', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      
+      console.log('📥 AI insights API response received:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ AI insights API call failed:', error);
       throw error;
     }
   },
@@ -165,10 +140,10 @@ Create insights that:
       chatHistory: []
     };
 
-    console.log('📡 Making API call for insights to:', apiEndpoints.business.chat);
+    console.log('📡 Making API call for ai-insights');
 
     try {
-      const response = await apiCall(apiEndpoints.business.chat, {
+      const response = await apiCall('/api/business/ai-insights', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
@@ -247,6 +222,39 @@ Create insights that:
     return await apiCall(apiEndpoints.business.saveProfile, {
       method: 'POST',
       body: JSON.stringify(userProfile)
+    });
+  },
+
+  async saveUserProfileToBlockchain(userId, profileData) {
+    return await apiCall(apiEndpoints.business.saveUserProfile, {
+      method: 'POST',
+      body: JSON.stringify({ userId, profileData })
+    });
+  },
+
+  async saveBusinessDataToBlockchain(userId, businessData) {
+    return await apiCall(apiEndpoints.business.saveBusinessData, {
+      method: 'POST',
+      body: JSON.stringify({ userId, businessData })
+    });
+  },
+
+  async saveMissionCompletionToBlockchain(userId, missionData) {
+    return await apiCall(apiEndpoints.business.saveMissionCompletion, {
+      method: 'POST',
+      body: JSON.stringify({ userId, missionData })
+    });
+  },
+
+  async getUserDataFromBlockchain(userId) {
+    return await apiCall(apiEndpoints.business.getUserData.replace(':userId', userId), {
+      method: 'GET'
+    });
+  },
+
+  async getTopicInfo(userId) {
+    return await apiCall(apiEndpoints.business.getTopicInfo.replace(':userId', userId), {
+      method: 'GET'
     });
   },
 

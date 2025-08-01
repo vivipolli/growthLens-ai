@@ -29,16 +29,24 @@ function createInstance(params: any) {
     case 'deepseek':
     case 'mistralai':
     case 'google':
+    case 'openrouter':
+      console.log(`🤖 Creating ChatOpenAI instance with model: ${modelName}`);
+      console.log(`🔗 Base URL: ${baseURL}`);
+      console.log(`🔑 API Key: ${apiKey?.substring(0, 12)}...`);
+      
       llm = new ChatOpenAI({
         modelName,
         apiKey,
         modalities: ['text'],
-        maxTokens: 1000,
-        temperature: 0.9,
+        maxTokens: 2000,
+        temperature: 0.7,
+        timeout: 60000, // 60 seconds timeout
         configuration: {
           baseURL,
         },
       });
+      
+      console.log(`✅ ChatOpenAI instance created successfully`);
       break;
     default:
       throw new Error(`Unsupported LLM type: ${llmType}`);

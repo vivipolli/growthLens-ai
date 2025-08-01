@@ -94,13 +94,180 @@ Be encouraging but realistic. Focus on scalable digital strategies.
 
   private generateInsightTypePrompt(insightType: string): string {
     const prompts: Record<string, string> = {
+      daily_missions: `
+Generate exactly 5 DAILY MISSIONS for TODAY that are actionable, quick tasks (15-60 minutes each).
+
+CRITICAL: Respond ONLY with exactly 5 missions in this exact format:
+
+1. **Mission Title** (e.g., "Create Instagram Story", "Research Competitors", "Update LinkedIn Profile")
+   Description: Specific, actionable task for today. Be concrete and clear about what to do.
+   Time: 15-60 minutes
+   Priority: high/medium/low
+   Category: content/social/analytics/strategy/growth/networking
+
+2. **Mission Title**
+   Description: Specific, actionable task for today.
+   Time: 15-60 minutes
+   Priority: high/medium/low
+   Category: content/social/analytics/strategy/growth/networking
+
+3. **Mission Title**
+   Description: Specific, actionable task for today.
+   Time: 15-60 minutes
+   Priority: high/medium/low
+   Category: content/social/analytics/strategy/growth/networking
+
+4. **Mission Title**
+   Description: Specific, actionable task for today.
+   Time: 15-60 minutes
+   Priority: high/medium/low
+   Category: content/social/analytics/strategy/growth/networking
+
+5. **Mission Title**
+   Description: Specific, actionable task for today.
+   Time: 15-60 minutes
+   Priority: high/medium/low
+   Category: content/social/analytics/strategy/growth/networking
+
+Examples of good missions:
+- "Post Instagram story about your morning routine"
+- "Research 3 competitors' pricing strategies"
+- "Update LinkedIn profile with recent achievements"
+- "Create 3 content ideas for next week"
+- "Engage with 5 posts from your target audience"
+
+IMPORTANT: Do NOT include any introductory text, explanations, or summaries. Start directly with "1. **Mission Title**" and end after the 5th mission.
+`,
+      weekly_goals: `
+Generate exactly 4 WEEKLY GOALS that are specific, measurable objectives for this week.
+
+CRITICAL: Respond ONLY with exactly 4 goals in this exact format:
+
+1. **Weekly Goal Title** (e.g., "Increase Instagram Followers", "Create 5 Blog Posts", "Generate 10 Leads")
+   Description: Specific, measurable outcome for this week. Include clear success criteria.
+   Target: [specific number] (e.g., 50, 5, 10, 1000)
+   Unit: followers/posts/leads/revenue/engagement/etc
+   Timeline: This week
+   Priority: high/medium/low
+   Category: growth/content/revenue/engagement
+
+2. **Weekly Goal Title**
+   Description: Specific, measurable outcome for this week.
+   Target: [specific number]
+   Unit: followers/posts/leads/revenue/engagement/etc
+   Timeline: This week
+   Priority: high/medium/low
+   Category: growth/content/revenue/engagement
+
+3. **Weekly Goal Title**
+   Description: Specific, measurable outcome for this week.
+   Target: [specific number]
+   Unit: followers/posts/leads/revenue/engagement/etc
+   Timeline: This week
+   Priority: high/medium/low
+   Category: growth/content/revenue/engagement
+
+4. **Weekly Goal Title**
+   Description: Specific, measurable outcome for this week.
+   Target: [specific number]
+   Unit: followers/posts/leads/revenue/engagement/etc
+   Timeline: This week
+   Priority: high/medium/low
+   Category: growth/content/revenue/engagement
+
+Examples of good weekly goals:
+- "Increase Instagram followers by 50"
+- "Create 5 blog posts for content calendar"
+- "Generate 10 qualified leads"
+- "Achieve 1000 website visitors"
+
+NO additional text, explanations, or summaries.
+`,
+      ai_insights: `
+Generate exactly 5 AI INSIGHTS about their business that are strategic observations and recommendations.
+
+CRITICAL: Respond ONLY with exactly 5 insights in this exact format:
+
+1. **Insight Title** (e.g., "Market Opportunity", "Competitive Advantage", "Growth Strategy")
+   Description: Strategic business insight, market observation, or actionable recommendation. Be specific and relevant to their industry and situation.
+   Type: opportunity/warning/tip/observation/strategy
+   Priority: high/medium/low
+   Category: strategy/market/growth/risk/innovation
+
+2. **Insight Title**
+   Description: Strategic business insight, market observation, or actionable recommendation.
+   Type: opportunity/warning/tip/observation/strategy
+   Priority: high/medium/low
+   Category: strategy/market/growth/risk/innovation
+
+3. **Insight Title**
+   Description: Strategic business insight, market observation, or actionable recommendation.
+   Type: opportunity/warning/tip/observation/strategy
+   Priority: high/medium/low
+   Category: strategy/market/growth/risk/innovation
+
+4. **Insight Title**
+   Description: Strategic business insight, market observation, or actionable recommendation.
+   Type: opportunity/warning/tip/observation/strategy
+   Priority: high/medium/low
+   Category: strategy/market/growth/risk/innovation
+
+5. **Insight Title**
+   Description: Strategic business insight, market observation, or actionable recommendation.
+   Type: opportunity/warning/tip/observation/strategy
+   Priority: high/medium/low
+   Category: strategy/market/growth/risk/innovation
+
+Examples of good insights:
+- "Your target audience is increasingly consuming video content - consider adding video to your content strategy"
+- "Competitors are using subscription models - you could differentiate with one-time premium services"
+- "There's an untapped market segment in [specific demographic] that aligns with your values"
+- "Your industry is shifting towards [trend] - early adoption could give you a competitive advantage"
+- "Your current pricing strategy leaves room for premium positioning"
+
+NO additional text, explanations, or summaries.
+`,
       content_strategy: `
-Generate 3-5 specific content strategy insights focusing on:
+Generate exactly 5 CONTENT STRATEGY insights focusing on:
 - Content themes that resonate with their target audience
 - Optimal content formats for their industry
 - Engagement strategies based on their audience pain points
 - Content calendar suggestions
 - Platform-specific recommendations
+
+CRITICAL: Respond ONLY with exactly 5 insights in this exact format:
+
+1. **Content Strategy Title**
+   Description: Specific content strategy insight or recommendation.
+   Type: strategy/tip/opportunity
+   Priority: high/medium/low
+   Category: content/strategy/engagement
+
+2. **Content Strategy Title**
+   Description: Specific content strategy insight or recommendation.
+   Type: strategy/tip/opportunity
+   Priority: high/medium/low
+   Category: content/strategy/engagement
+
+3. **Content Strategy Title**
+   Description: Specific content strategy insight or recommendation.
+   Type: strategy/tip/opportunity
+   Priority: high/medium/low
+   Category: content/strategy/engagement
+
+4. **Content Strategy Title**
+   Description: Specific content strategy insight or recommendation.
+   Type: strategy/tip/opportunity
+   Priority: high/medium/low
+   Category: content/strategy/engagement
+
+5. **Content Strategy Title**
+   Description: Specific content strategy insight or recommendation.
+   Type: strategy/tip/opportunity
+   Priority: high/medium/low
+   Category: content/strategy/engagement
+
+NO additional text, explanations, or summaries.
 `,
       audience_growth: `
 Generate 3-5 audience growth insights focusing on:
@@ -223,37 +390,326 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
   }
 
   private parseAgentResponse(agentOutput: string, insightType: string): BusinessInsightResponse {
-    const mockInsights: BusinessInsight[] = [
-      {
-        id: uuidv4(),
-        type: 'strategy',
-        title: 'Personalized Content Strategy',
-        content: agentOutput.substring(0, 200) + '...',
-        priority: 'high',
-        category: this.mapInsightTypeToCategory(insightType),
-        action: 'Implement content strategy',
-        impact: 'Increased engagement',
-        confidence: 85,
-        reasoning: 'Based on your target audience analysis',
-        timeline: '2-4 weeks',
-        resources: ['Content calendar template', 'Audience research tools']
-      }
-    ];
+    console.log('🔄 BusinessCoachingService.parseAgentResponse: Parsing AI response');
+    console.log(`📝 Raw AI output: ${agentOutput.substring(0, 500)}...`);
+    console.log(`📝 Full AI output length: ${agentOutput.length}`);
 
-    return {
-      insights: mockInsights,
-      summary: 'AI-generated insights based on your business profile',
-      nextSteps: [
-        'Review personalized recommendations',
-        'Implement high-priority actions',
-        'Track progress and metrics'
-      ],
-      personalized_message: `Based on your profile and goals, these insights are tailored specifically for your journey. Remember, growth takes time but you're on the right path!`
-    };
+    const insights: BusinessInsight[] = [];
+    
+    try {
+            if (insightType === 'daily_missions') {
+        // Simple parser that extracts insights from the AI response
+        console.log('🔍 Parsing daily missions from AI response...');
+        
+        // Split the response into lines and look for insights
+        const lines = agentOutput.split('\n');
+        let currentInsight = null;
+        
+        console.log(`📝 Total lines in response: ${lines.length}`);
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Debug: log lines that contain "Insight"
+          if (line.includes('Insight')) {
+            console.log(`🔍 Found insight line: "${line}"`);
+          }
+          
+          // Look for insight patterns - multiple formats
+          if ((line.includes('Insight') && line.match(/\d+:/)) || 
+              (line.match(/^\d+\.\s*\*\*/)) || 
+              (line.match(/^\d+\.\s+[A-Z]/))) {
+            console.log(`✅ Processing insight line: "${line}"`);
+            
+            // Start of a new insight
+            if (currentInsight && currentInsight.title && currentInsight.content) {
+              console.log(`📝 Adding insight: "${currentInsight.title}"`);
+              insights.push({
+                id: uuidv4(),
+                type: 'strategy',
+                title: currentInsight.title,
+                content: currentInsight.content,
+                priority: currentInsight.priority,
+                category: currentInsight.category,
+                action: currentInsight.title,
+                impact: 'Progress towards goals',
+                confidence: 85,
+                reasoning: 'AI-generated based on your profile',
+                timeline: 'Today',
+                resources: []
+              });
+            }
+            
+            // Extract title from multiple formats
+            let title = '';
+            if (line.includes('Insight')) {
+              title = line.replace(/.*?Insight \d+:\s*/, '').trim();
+            } else if (line.match(/^\d+\.\s*\*\*/)) {
+              title = line.replace(/^\d+\.\s*\*\*(.*?)\*\*/, '$1').trim();
+            } else if (line.match(/^\d+\.\s+[A-Z]/)) {
+              title = line.replace(/^\d+\.\s+/, '').trim();
+            }
+            console.log(`📝 Extracted title: "${title}"`);
+            currentInsight = {
+              title: title,
+              content: '',
+              priority: (insights.length === 0 ? 'high' : insights.length === 1 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+              category: this.mapInsightTypeToCategory(insightType)
+            };
+          } else if (currentInsight && line && !line.startsWith('Why') && !line.startsWith('Action') && !line.startsWith('What to do')) {
+            // Add content to current insight
+            if (currentInsight.content) {
+              currentInsight.content += ' ' + line;
+            } else {
+              currentInsight.content = line;
+            }
+            console.log(`📝 Added content to insight: "${line}"`);
+          }
+        }
+        
+        // Add the last insight if it exists
+        if (currentInsight && currentInsight.title && currentInsight.content) {
+          console.log(`📝 Adding final insight: "${currentInsight.title}"`);
+          insights.push({
+            id: uuidv4(),
+            type: 'strategy',
+            title: currentInsight.title,
+            content: currentInsight.content,
+            priority: currentInsight.priority,
+            category: currentInsight.category,
+            action: currentInsight.title,
+            impact: 'Progress towards goals',
+            confidence: 85,
+            reasoning: 'AI-generated based on your profile',
+            timeline: 'Today',
+            resources: []
+          });
+        }
+        
+        console.log(`✅ Found ${insights.length} insights using simple parser`);
+      } else if (insightType === 'weekly_goals') {
+        // Simple parser for weekly goals (same as daily_missions)
+        console.log('🔍 Parsing weekly goals from AI response...');
+        
+        const lines = agentOutput.split('\n');
+        let currentInsight = null;
+        
+        console.log(`📝 Total lines in response: ${lines.length}`);
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Debug: log lines that contain "Goal"
+          if (line.includes('Goal')) {
+            console.log(`🔍 Found goal line: "${line}"`);
+          }
+          
+          // Look for goal patterns - multiple formats
+          if ((line.includes('Goal') && line.match(/\d+:/)) || 
+              (line.match(/^\d+\.\s*\*\*/)) || 
+              (line.match(/^\d+\.\s+[A-Z]/))) {
+            console.log(`✅ Processing goal line: "${line}"`);
+            
+            // Start of a new goal
+            if (currentInsight && currentInsight.title && currentInsight.content) {
+              console.log(`📝 Adding goal: "${currentInsight.title}"`);
+              insights.push({
+                id: uuidv4(),
+                type: 'strategy',
+                title: currentInsight.title,
+                content: currentInsight.content,
+                priority: currentInsight.priority,
+                category: currentInsight.category,
+                action: currentInsight.title,
+                impact: 'Progress towards goals',
+                confidence: 85,
+                reasoning: 'AI-generated based on your profile',
+                timeline: 'This week',
+                resources: []
+              });
+            }
+            
+            // Extract title from multiple formats
+            let title = '';
+            if (line.includes('Goal')) {
+              title = line.replace(/.*?Goal \d+:\s*/, '').trim();
+            } else if (line.match(/^\d+\.\s*\*\*/)) {
+              title = line.replace(/^\d+\.\s*\*\*(.*?)\*\*/, '$1').trim();
+            } else if (line.match(/^\d+\.\s+[A-Z]/)) {
+              title = line.replace(/^\d+\.\s+/, '').trim();
+            }
+            console.log(`📝 Extracted title: "${title}"`);
+            currentInsight = {
+              title: title,
+              content: '',
+              priority: (insights.length === 0 ? 'high' : insights.length === 1 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+              category: this.mapInsightTypeToCategory(insightType)
+            };
+          } else if (currentInsight && line && !line.startsWith('Why') && !line.startsWith('Action') && !line.startsWith('What to do')) {
+            // Add content to current goal
+            if (currentInsight.content) {
+              currentInsight.content += ' ' + line;
+            } else {
+              currentInsight.content = line;
+            }
+            console.log(`📝 Added content to goal: "${line}"`);
+          }
+        }
+        
+        // Add the last goal if it exists
+        if (currentInsight && currentInsight.title && currentInsight.content) {
+          console.log(`📝 Adding final goal: "${currentInsight.title}"`);
+          insights.push({
+            id: uuidv4(),
+            type: 'strategy',
+            title: currentInsight.title,
+            content: currentInsight.content,
+            priority: currentInsight.priority,
+            category: currentInsight.category,
+            action: currentInsight.title,
+            impact: 'Progress towards goals',
+            confidence: 85,
+            reasoning: 'AI-generated based on your profile',
+            timeline: 'This week',
+            resources: []
+          });
+        }
+        
+        console.log(`✅ Found ${insights.length} goals using simple parser`);
+      } else if (insightType === 'ai_insights' || insightType === 'content_strategy') {
+        // Simple parser for AI insights (same as daily_missions)
+        console.log('🔍 Parsing AI insights from AI response...');
+        
+        const lines = agentOutput.split('\n');
+        let currentInsight = null;
+        
+        console.log(`📝 Total lines in response: ${lines.length}`);
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Debug: log lines that contain "Insight"
+          if (line.includes('Insight')) {
+            console.log(`🔍 Found insight line: "${line}"`);
+          }
+          
+          // Look for insight patterns - multiple formats
+          if ((line.includes('Insight') && line.match(/\d+:/)) || 
+              (line.match(/^\d+\.\s*\*\*/)) || 
+              (line.match(/^\d+\.\s+[A-Z]/))) {
+            console.log(`✅ Processing insight line: "${line}"`);
+            
+            // Start of a new insight
+            if (currentInsight && currentInsight.title && currentInsight.content) {
+              console.log(`📝 Adding insight: "${currentInsight.title}"`);
+              insights.push({
+                id: uuidv4(),
+                type: 'strategy',
+                title: currentInsight.title,
+                content: currentInsight.content,
+                priority: currentInsight.priority,
+                category: currentInsight.category,
+                action: currentInsight.title,
+                impact: 'Strategic business improvement',
+                confidence: 85,
+                reasoning: 'AI-generated based on your profile',
+                timeline: '1-2 weeks',
+                resources: []
+              });
+            }
+            
+            // Extract title from multiple formats
+            let title = '';
+            if (line.includes('Insight')) {
+              title = line.replace(/.*?Insight \d+:\s*/, '').trim();
+            } else if (line.match(/^\d+\.\s*\*\*/)) {
+              title = line.replace(/^\d+\.\s*\*\*(.*?)\*\*/, '$1').trim();
+            } else if (line.match(/^\d+\.\s+[A-Z]/)) {
+              title = line.replace(/^\d+\.\s+/, '').trim();
+            }
+            console.log(`📝 Extracted title: "${title}"`);
+            currentInsight = {
+              title: title,
+              content: '',
+              priority: (insights.length === 0 ? 'high' : insights.length === 1 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+              category: this.mapInsightTypeToCategory(insightType)
+            };
+          } else if (currentInsight && line && !line.startsWith('Why') && !line.startsWith('Action') && !line.startsWith('What to do')) {
+            // Add content to current insight
+            if (currentInsight.content) {
+              currentInsight.content += ' ' + line;
+            } else {
+              currentInsight.content = line;
+            }
+            console.log(`📝 Added content to insight: "${line}"`);
+          }
+        }
+        
+        // Add the last insight if it exists
+        if (currentInsight && currentInsight.title && currentInsight.content) {
+          console.log(`📝 Adding final insight: "${currentInsight.title}"`);
+          insights.push({
+            id: uuidv4(),
+            type: 'strategy',
+            title: currentInsight.title,
+            content: currentInsight.content,
+            priority: currentInsight.priority,
+            category: currentInsight.category,
+            action: currentInsight.title,
+            impact: 'Strategic business improvement',
+            confidence: 85,
+            reasoning: 'AI-generated based on your profile',
+            timeline: '1-2 weeks',
+            resources: []
+          });
+        }
+        
+        console.log(`✅ Found ${insights.length} insights using simple parser`);
+      }
+      
+      // If no insights found, create fallback
+      if (insights.length === 0) {
+        console.log('⚠️ No insights found, creating fallback');
+        insights.push({
+          id: uuidv4(),
+          type: 'strategy',
+          title: 'Complete Your Profile',
+          content: 'Please complete your onboarding to get personalized recommendations.',
+          priority: 'high',
+          category: this.mapInsightTypeToCategory(insightType),
+          action: 'Complete onboarding',
+          impact: 'Get personalized insights',
+          confidence: 90,
+          reasoning: 'Profile completion required',
+          timeline: 'Immediate',
+          resources: []
+        });
+      }
+
+      console.log(`✅ Parsed ${insights.length} insights from AI response`);
+      
+      return {
+        insights,
+        summary: `Generated ${insights.length} personalized ${insightType.replace('_', ' ')}`,
+        nextSteps: [
+          'Review the recommendations',
+          'Implement high-priority items',
+          'Track your progress'
+        ],
+        personalized_message: `Here are your personalized ${insightType.replace('_', ' ')} based on your business profile!`
+      };
+
+    } catch (error) {
+      console.error('❌ Error parsing AI response:', error);
+      return this.generateFallbackInsights(insightType);
+    }
   }
 
   private mapInsightTypeToCategory(insightType: string): BusinessInsight['category'] {
     const mapping: Record<string, BusinessInsight['category']> = {
+      daily_missions: 'strategy',
+      weekly_goals: 'strategy',
+      ai_insights: 'strategy',
       content_strategy: 'content',
       audience_growth: 'audience',
       monetization: 'monetization',

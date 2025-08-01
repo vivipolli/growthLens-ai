@@ -1,0 +1,20 @@
+{
+  "test": {
+    "userId": "test",
+    "topicId": "0.0.6483584",
+    "createdAt": "2025-07-31T20:26:34.237Z",
+    "memo": "User journey data for test"
+  },
+  "Maria Silva": {
+    "userId": "Maria Silva",
+    "topicId": "0.0.6483626",
+    "createdAt": "2025-07-31T20:32:31.169Z",
+    "memo": "User journey data for Maria Silva"
+  },
+  "anonymous": {
+    "userId": "anonymous",
+    "topicId": "0.0.6483633",
+    "createdAt": "2025-07-31T20:33:36.158Z",
+    "memo": "User journey data for anonymous"
+  }
+}

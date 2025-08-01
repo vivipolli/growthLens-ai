@@ -2,18 +2,24 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import { Card, Button, AIMentor } from './index'
 import { useNavigate } from 'react-router-dom'
+import { businessCoachingService } from '../services/businessCoachingService'
 
 const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = false }) => {
     const [currentStep, setCurrentStep] = useState(0)
     const [answers, setAnswers] = useState(() => {
-        if (isEditMode) {
-            try {
-                const data = localStorage.getItem('personalOnboardingAnswers')
-                return data ? JSON.parse(data) : {}
-            } catch {
-                return {}
+        // Always try to load from localStorage first
+        try {
+            const data = localStorage.getItem('personalOnboardingAnswers')
+            if (data) {
+                const parsedData = JSON.parse(data)
+                console.log('📂 Loaded personal data from localStorage:', parsedData)
+                return parsedData
             }
+        } catch (error) {
+            console.error('❌ Error loading personal data from localStorage:', error)
         }
+
+        // Fallback to initialAnswers or empty object
         return initialAnswers || {}
     })
     const { gradients } = useTheme()
@@ -49,6 +55,27 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
     const saveAnswers = (answers) => {
         // Save to localStorage for now
         localStorage.setItem('personalOnboardingAnswers', JSON.stringify(answers))
+        console.log('💾 Saved personal data to localStorage:', answers)
+
+        // Save to blockchain
+        try {
+            const userId = answers.name || 'anonymous'
+            businessCoachingService.saveUserProfileToBlockchain(userId, answers)
+                .then(response => {
+                    if (response.success) {
+                        console.log('✅ Personal data saved to blockchain:', response)
+                        if (response.transactionId) {
+                            console.log(`🔗 HashScan URL: ${response.hashscanUrl}`)
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Failed to save personal data to blockchain:', error)
+                })
+        } catch (error) {
+            console.error('❌ Error saving to blockchain:', error)
+        }
+
         // Future: send to AI agent or blockchain here
         // Example:
         // sendToAIAgent(answers)
@@ -199,10 +226,13 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
     const progress = ((currentStep + 1) / personalSteps.length) * 100
 
     const handleAnswerChange = (questionId, value) => {
-        setAnswers(prev => ({
-            ...prev,
+        const newAnswers = {
+            ...answers,
             [questionId]: value
-        }))
+        }
+        setAnswers(newAnswers)
+        // Save to localStorage immediately
+        saveAnswers(newAnswers)
     }
 
     const isStepComplete = (step) => {

@@ -6,7 +6,6 @@ import { JourneyManager, PersonalOnboarding, BusinessOnboarding, Header } from '
 // Clerk publishable key (in production, use environment variable)
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_demo_key'
 
-console.log('🔧 App.jsx: Starting application...')
 console.log('🔧 App.jsx: Clerk key:', CLERK_PUBLISHABLE_KEY ? 'Configured' : 'Not configured')
 
 // Helper function to check if onboarding is complete
@@ -16,8 +15,6 @@ const isOnboardingComplete = () => {
     const business = localStorage.getItem('businessOnboardingAnswers')
 
     console.log('🔍 isOnboardingComplete check:')
-    console.log('🔍 personalOnboardingAnswers:', personal)
-    console.log('🔍 businessOnboardingAnswers:', business)
     console.log('🔍 personal exists:', !!personal)
     console.log('🔍 business exists:', !!business)
 
@@ -107,11 +104,6 @@ const getNextOnboardingStep = () => {
 
 function AppContent() {
   const { isSignedIn, user, isLoaded } = useAuth()
-
-  console.log('🔧 AppContent: Component rendered')
-  console.log('🔧 AppContent: isLoaded:', isLoaded)
-  console.log('🔧 AppContent: isSignedIn:', isSignedIn)
-  console.log('🔧 AppContent: user:', user)
 
   const syncWithBackend = async () => {
     try {

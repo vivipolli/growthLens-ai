@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import { useDailyMissions } from '../hooks/useDailyMissions'
+import { useBlockchainData } from '../hooks/useBlockchainData'
 import {
     Card,
     Button,
@@ -17,11 +18,14 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
     const [showProfileMenu, setShowProfileMenu] = useState(false)
     const { gradients } = useTheme()
 
+    // Add blockchain data integration
+    const userId = personalData?.name || 'anonymous'
+    const { userData: blockchainData, loading: blockchainLoading } = useBlockchainData(userId)
+
     const {
         missions,
         weeklyGoals,
         aiInsights,
-        loading,
         error,
         lastGenerated,
         hasAttemptedLoad,
@@ -31,7 +35,15 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
         refreshMissions,
         clearCache,
         getCompletedMissionsCount,
-        getTotalMissionsCount
+        getTotalMissionsCount,
+        // Individual loading states
+        missionsLoading,
+        goalsLoading,
+        insightsLoading,
+        // Individual refresh functions
+        generateDailyMissions,
+        generateWeeklyGoals,
+        generateAIInsights
     } = useDailyMissions()
 
     useEffect(() => {
@@ -43,12 +55,22 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
 
             saveUserProfile(userProfile)
 
-            if (!lastGenerated || !missions.length) {
-                console.log('🚀 Dashboard: Triggering initial AI mission generation');
-                generateAIMissions()
-            }
+            // Don't auto-generate on load - let user click individual refresh buttons
+            console.log('🚀 Dashboard: Profile loaded, ready for individual generation')
         }
-    }, [personalData, businessData, generateAIMissions, lastGenerated, missions.length])
+    }, [personalData, businessData])
+
+    // Log blockchain data status
+    useEffect(() => {
+        if (blockchainData) {
+            console.log('📊 Dashboard: Blockchain data loaded:', {
+                userProfile: !!blockchainData.userProfile,
+                businessData: !!blockchainData.businessData,
+                aiInsights: blockchainData.aiInsights?.length || 0,
+                missionCompletions: blockchainData.missionCompletions?.length || 0
+            })
+        }
+    }, [blockchainData])
 
 
     const handleMissionComplete = (missionId) => {
@@ -92,6 +114,16 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Blockchain Status Indicator */}
+                {blockchainData && (
+                    <div className="mb-4 flex items-center justify-end">
+                        <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-green-700 font-medium">Blockchain Connected</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Main Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column - Missions & Goals */}
@@ -115,12 +147,12 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                                         variant="secondary"
                                         size="sm"
                                         onClick={() => {
-                                            console.log('🖱️ Refresh button clicked');
-                                            refreshMissions();
+                                            console.log('🖱️ Daily missions refresh button clicked');
+                                            generateDailyMissions();
                                         }}
-                                        disabled={loading}
+                                        disabled={missionsLoading}
                                     >
-                                        {loading ? '🔄' : '✨'} {loading ? 'Generating...' : 'Refresh'}
+                                        {missionsLoading ? '🔄' : '✨'} {missionsLoading ? 'Generating...' : 'Refresh'}
                                     </Button>
                                 </div>
                             </div>
@@ -131,20 +163,13 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                                 </div>
                             )}
 
-                            {loading && (
-                                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                                        <span className="text-blue-700">🤖 AI is generating personalized missions based on your profile...</span>
-                                    </div>
-                                </div>
-                            )}
+
 
                             <div className="space-y-4">
-                                {loading || (!hasAttemptedLoad && missions.length === 0) ? (
+                                {missionsLoading ? (
                                     <MissionLoadingSkeleton />
-                                ) : missions.length === 0 ? (
-                                    <MissionEmptyState onGenerate={refreshMissions} />
+                                ) : (!missions || missions.length === 0) ? (
+                                    <MissionEmptyState onGenerate={generateDailyMissions} />
                                 ) : (
                                     missions.map((mission) => (
                                         <div
@@ -176,7 +201,6 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                                                     <p className="text-sm text-gray-600 mb-2">{mission.description}</p>
                                                     <div className="flex items-center space-x-4 text-xs text-gray-500">
                                                         <span>⏱ {mission.estimatedTime}</span>
-                                                        <span className="text-purple-600 font-medium">{mission.reward}</span>
                                                     </div>
                                                 </div>
                                                 {mission.status !== 'completed' && (
@@ -197,12 +221,25 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
 
                         {/* Weekly Goals */}
                         <Card>
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Weekly Goals</h2>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-gray-900">Weekly Goals</h2>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => {
+                                        console.log('🖱️ Weekly goals refresh button clicked');
+                                        generateWeeklyGoals();
+                                    }}
+                                    disabled={goalsLoading}
+                                >
+                                    {goalsLoading ? '🔄' : '📈'} {goalsLoading ? 'Generating...' : 'Refresh'}
+                                </Button>
+                            </div>
                             <div className="space-y-6">
-                                {loading || (!hasAttemptedLoad && weeklyGoals.length === 0) ? (
+                                {goalsLoading ? (
                                     <GoalsLoadingSkeleton />
-                                ) : weeklyGoals.length === 0 ? (
-                                    <GoalsEmptyState onGenerate={refreshMissions} />
+                                ) : (!weeklyGoals || weeklyGoals.length === 0) ? (
+                                    <GoalsEmptyState onGenerate={generateWeeklyGoals} />
                                 ) : (
                                     weeklyGoals.map((goal) => (
                                         <div key={goal.id} className="space-y-3">
@@ -249,14 +286,16 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-gray-900">AI Insights</h2>
                                 <div className="flex items-center gap-2">
-                                    {/* Debug button - temporary */}
                                     <Button
                                         variant="secondary"
                                         size="sm"
-                                        onClick={clearCache}
-                                        disabled={loading}
+                                        onClick={() => {
+                                            console.log('🖱️ AI insights refresh button clicked');
+                                            generateAIInsights();
+                                        }}
+                                        disabled={insightsLoading}
                                     >
-                                        🗑️ Clear Cache
+                                        {insightsLoading ? '🔄' : '💡'} {insightsLoading ? 'Generating...' : 'Refresh'}
                                     </Button>
                                     {lastGenerated && (
                                         <span className="text-xs text-gray-500">
@@ -266,10 +305,10 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                                 </div>
                             </div>
                             <div className="space-y-4">
-                                {loading || (!hasAttemptedLoad && aiInsights.length === 0) ? (
+                                {insightsLoading ? (
                                     <InsightsLoadingSkeleton />
-                                ) : aiInsights.length === 0 ? (
-                                    <InsightsEmptyState onGenerate={refreshMissions} />
+                                ) : (!aiInsights || aiInsights.length === 0) ? (
+                                    <InsightsEmptyState onGenerate={generateAIInsights} />
                                 ) : (
                                     aiInsights.map((insight) => (
                                         <div

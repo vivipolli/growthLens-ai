@@ -87,6 +87,12 @@ export class BusinessController {
         console.log(`   - Industry: ${userProfile.business?.industry || 'Not specified'}`);
         console.log(`   - Primary motivation: ${userProfile.personal?.primary_motivation || 'Not specified'}`);
         console.log(`   - Success definition: ${userProfile.personal?.success_definition?.substring(0, 100) || 'Not specified'}...`);
+        console.log(`   - User profile structure:`, {
+          hasPersonal: !!userProfile.personal,
+          hasBusiness: !!userProfile.business,
+          personalKeys: userProfile.personal ? Object.keys(userProfile.personal) : [],
+          businessKeys: userProfile.business ? Object.keys(userProfile.business) : []
+        });
       }
       
       if (!message || !userProfile) {
@@ -361,10 +367,16 @@ export class BusinessController {
           data: userData
         });
       } else {
-        console.log(`❌ [${requestId}] No data found for user ${userId}`);
-        res.status(404).json({
-          success: false,
-          error: 'No data found for this user'
+        console.log(`ℹ️  [${requestId}] No data found for user ${userId} - this is normal for new users`);
+        res.json({
+          success: true,
+          data: {
+            userProfile: null,
+            businessData: null,
+            aiInsights: [],
+            missionCompletions: []
+          },
+          message: 'No data found for this user yet. This is normal for new users.'
         });
       }
       

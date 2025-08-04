@@ -821,9 +821,18 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
       console.log(`📊 BusinessCoachingService: Blockchain insights:`, blockchainInsights.length);
       
       // Normalizar formato para ser consistente
-      const normalizedInsights = allInsights.map(insight => {
+      console.log(`🔍 BusinessCoachingService: Processing ${allInsights.length} insights for normalization`);
+      
+      const normalizedInsights = allInsights.map((insight, index) => {
+        console.log(`🔍 BusinessCoachingService: Processing insight ${index + 1}:`, {
+          hasType: !!insight.type,
+          hasData: !!insight.data,
+          insightKeys: Object.keys(insight)
+        });
+        
         // Se o insight tem estrutura aninhada (cache), extrair os dados
         if (insight.type && insight.data) {
+          console.log(`🔍 BusinessCoachingService: Insight ${index + 1} has nested structure`);
           return {
             insightType: insight.data.insightType,
             insights: insight.data.insights,
@@ -837,11 +846,13 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
         // Se o insight já está no formato correto (blockchain)
         // Adicionar insightType se não existir (para insights antigos)
         if (!insight.insightType) {
+          console.log(`🔍 BusinessCoachingService: Insight ${index + 1} missing insightType, adding default`);
           return {
             ...insight,
             insightType: 'daily_missions' // Padrão para insights antigos
           };
         }
+        console.log(`🔍 BusinessCoachingService: Insight ${index + 1} already in correct format`);
         return insight;
       });
       
@@ -856,9 +867,9 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
         console.log(`✅ BusinessCoachingService: User data retrieved successfully`);
         return combinedData;
       } else {
-        console.log(`❌ BusinessCoachingService: No data found for user ${userId}`);
-      return null;
-    }
+        console.log(`ℹ️  BusinessCoachingService: No data found for user ${userId} - returning empty structure`);
+        return combinedData; // Return empty structure instead of null
+      }
 
     } catch (error) {
       console.error('❌ BusinessCoachingService: Error reading user data:', error);

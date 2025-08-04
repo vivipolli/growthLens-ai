@@ -19,9 +19,15 @@ export const useBlockchainData = (userId) => {
       if (response.success) {
         console.log('✅ User data loaded from blockchain:', response.data);
         setUserData(response.data);
+        
+        // Log if this is a new user with no data
+        if (response.message && response.message.includes('No data found')) {
+          console.log('ℹ️  New user detected - no data yet, this is normal');
+        }
       } else {
-        console.log('❌ No data found for user:', userId);
+        console.log('❌ Error loading user data:', response.error);
         setUserData(null);
+        setError(response.error);
       }
     } catch (error) {
       console.error('❌ Error loading user data from blockchain:', error);
@@ -63,6 +69,7 @@ export const useBlockchainData = (userId) => {
     error,
     loadUserData,
     loadTopicInfo,
-    hasData: userData !== null
+    hasData: userData !== null,
+    isNewUser: userData && userData.aiInsights && userData.aiInsights.length === 0 && !userData.userProfile && !userData.businessData
   };
 }; 

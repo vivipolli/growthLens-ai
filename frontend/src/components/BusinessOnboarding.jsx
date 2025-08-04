@@ -429,12 +429,12 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
         switch (question.type) {
             case 'info':
                 return (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="bg-blue-900/20 border border-blue-400 rounded-lg p-4">
                         <div className="flex items-start space-x-3">
-                            <div className="text-blue-600 text-lg">💡</div>
+                            <div className="text-blue-400 text-lg">💡</div>
                             <div>
-                                <h4 className="font-medium text-blue-900 mb-2">{question.label}</h4>
-                                <p className="text-blue-800 text-sm leading-relaxed">{question.content}</p>
+                                <h4 className="font-medium text-blue-300 mb-2">{question.label}</h4>
+                                <p className="text-gray-300 text-sm leading-relaxed">{question.content}</p>
                             </div>
                         </div>
                     </div>
@@ -465,13 +465,13 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                 return (
                     <div className="space-y-4">
                         {listItems.map((item, index) => (
-                            <div key={index} className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                            <div key={index} className="border border-gray-600 rounded-lg p-4 bg-gray-800/20">
                                 <div className="flex items-center justify-between mb-3">
-                                    <h4 className="font-medium text-gray-900">Profile {index + 1}</h4>
+                                    <h4 className="font-medium text-blue-300">Profile {index + 1}</h4>
                                     <button
                                         type="button"
                                         onClick={() => removeItem(index)}
-                                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                        className="text-red-400 hover:text-red-300 text-sm font-medium"
                                     >
                                         Remove
                                     </button>
@@ -479,7 +479,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {question.fields.map((field) => (
                                         <div key={field.id}>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">
                                                 {field.label}
                                             </label>
                                             <input
@@ -487,7 +487,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                                 value={item[field.id] || ''}
                                                 onChange={(e) => updateItem(index, field.id, e.target.value)}
                                                 placeholder={field.placeholder}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-gray-200"
                                             />
                                         </div>
                                     ))}
@@ -497,7 +497,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                         <button
                             type="button"
                             onClick={addItem}
-                            className="w-full py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-purple-400 hover:text-purple-600 transition-colors"
+                            className="w-full py-3 px-4 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:border-blue-400 hover:text-blue-400 transition-colors"
                         >
                             + Add Competitor Profile
                         </button>
@@ -511,7 +511,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                         value={value}
                         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                         placeholder={question.placeholder}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-gray-200"
                     />
                 )
 
@@ -520,7 +520,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                     <select
                         value={value}
                         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-gray-200"
                     >
                         <option value="">Select an option</option>
                         {question.options.map((option, index) => (
@@ -547,12 +547,12 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                             handleAnswerChange(question.id, selectedValues.filter(v => v !== option))
                                         }
                                     }}
-                                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="w-4 h-4 text-blue-600 border-gray-600 rounded focus:ring-blue-500"
                                 />
-                                <span className="text-gray-700">{option}</span>
+                                <span className="text-gray-300">{option}</span>
                             </label>
                         ))}
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-400">
                             Selected: {selectedValues.length}/{question.maxSelections}
                         </p>
                     </div>
@@ -565,7 +565,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                         placeholder={question.placeholder}
                         rows={4}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                        className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-gray-200 resize-none"
                     />
                 )
 
@@ -588,74 +588,74 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                             <div className={`w-24 h-24 ${gradients.primary} rounded-full flex items-center justify-center mx-auto mb-6`}>
                                 <span className="text-white text-4xl">🎉</span>
                             </div>
-                            <h1 className="text-3xl font-bold text-gray-900 mb-4">Business Setup Complete!</h1>
-                            <p className="text-xl text-gray-600 mb-6">
+                            <h1 className="text-3xl font-bold text-blue-300 mb-4">Business Setup Complete!</h1>
+                            <p className="text-xl text-gray-400 mb-6">
                                 You've successfully set up your digital business foundation. Your AI mentor is ready to guide you through your daily success path.
                             </p>
                         </div>
 
                         {hasCompleteVisualIdentity ? (
                             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-8">
-                                <h2 className="text-xl font-bold text-gray-900 mb-4">🎨 Visual Identity Complete!</h2>
-                                <p className="text-gray-700 mb-4">
+                                <h2 className="text-xl font-bold text-blue-300 mb-4">🎨 Visual Identity Complete!</h2>
+                                <p className="text-gray-300 mb-4">
                                     Great! You already have a complete visual identity, content templates, and website. You're ready to start your daily growth journey.
                                 </p>
-                                <div className="bg-white rounded-lg p-4 border border-green-200">
-                                    <h3 className="font-semibold text-gray-900 mb-2">What's Next?</h3>
+                                <div className="bg-gray-800 rounded-lg p-4 border border-green-400">
+                                    <h3 className="font-semibold text-blue-300 mb-2">What's Next?</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
                                         <div className="text-center">
-                                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                            <div className="w-12 h-12 bg-blue-900/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                                                 <span className="text-2xl">📱</span>
                                             </div>
-                                            <h4 className="font-semibold text-gray-900 mb-2">Daily Missions</h4>
-                                            <p className="text-sm text-gray-600">Complete daily tasks to grow your business</p>
+                                            <h4 className="font-semibold text-blue-300 mb-2">Daily Missions</h4>
+                                            <p className="text-sm text-gray-400">Complete daily tasks to grow your business</p>
                                         </div>
                                         <div className="text-center">
                                             <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                                                 <span className="text-2xl">🤖</span>
                                             </div>
-                                            <h4 className="font-semibold text-gray-900 mb-2">Business Observations</h4>
-                                            <p className="text-sm text-gray-600">Get personalized recommendations based on your data</p>
+                                            <h4 className="font-semibold text-blue-300 mb-2">Business Observations</h4>
+                                            <p className="text-sm text-gray-400">Get personalized recommendations based on your data</p>
                                         </div>
                                         <div className="text-center">
                                             <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                                                 <span className="text-2xl">📈</span>
                                             </div>
-                                            <h4 className="font-semibold text-gray-900 mb-2">Track Progress</h4>
-                                            <p className="text-sm text-gray-600">Monitor your growth and celebrate achievements</p>
+                                            <h4 className="font-semibold text-blue-300 mb-2">Track Progress</h4>
+                                            <p className="text-sm text-gray-400">Monitor your growth and celebrate achievements</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-8">
-                                <h2 className="text-xl font-bold text-gray-900 mb-4">🎨 Visual Identity Setup Needed</h2>
-                                <p className="text-gray-700 mb-4">
+                            <div className="bg-gradient-to-r from-blue-900/20 to-indigo-900/20 rounded-xl p-6 mb-8">
+                                <h2 className="text-xl font-bold text-blue-300 mb-4">🎨 Visual Identity Setup Needed</h2>
+                                <p className="text-gray-300 mb-4">
                                     You've completed the business foundation! Now let's create your visual identity to complete your digital presence.
                                 </p>
-                                <div className="bg-white rounded-lg p-4 border border-blue-200">
-                                    <h3 className="font-semibold text-gray-900 mb-2">Visual Identity Creation Includes:</h3>
+                                <div className="bg-gray-800 rounded-lg p-4 border border-blue-400">
+                                    <h3 className="font-semibold text-blue-300 mb-2">Visual Identity Creation Includes:</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
                                         <div className="text-center">
-                                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                            <div className="w-12 h-12 bg-blue-900/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                                                 <span className="text-2xl">🎨</span>
                                             </div>
-                                            <h4 className="font-semibold text-gray-900 mb-2">Color Palette</h4>
-                                            <p className="text-sm text-gray-600">Create your brand colors and visual style</p>
+                                            <h4 className="font-semibold text-blue-300 mb-2">Color Palette</h4>
+                                            <p className="text-sm text-gray-400">Create your brand colors and visual style</p>
                                         </div>
                                         <div className="text-center">
                                             <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                                                 <span className="text-2xl">📝</span>
                                             </div>
-                                            <h4 className="font-semibold text-gray-900 mb-2">Content Templates</h4>
-                                            <p className="text-sm text-gray-600">Design templates for social media posts</p>
+                                            <h4 className="font-semibold text-blue-300 mb-2">Content Templates</h4>
+                                            <p className="text-sm text-gray-400">Design templates for social media posts</p>
                                         </div>
                                         <div className="text-center">
-                                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                            <div className="w-12 h-12 bg-blue-900/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                                                 <span className="text-2xl">🌐</span>
                                             </div>
-                                            <h4 className="font-semibold text-gray-900 mb-2">Website Setup</h4>
-                                            <p className="text-sm text-gray-600">Create your professional website</p>
+                                            <h4 className="font-semibold text-blue-300 mb-2">Website Setup</h4>
+                                            <p className="text-sm text-gray-400">Create your professional website</p>
                                         </div>
                                     </div>
                                 </div>
@@ -732,46 +732,77 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
 
     return (
         <div className={`min-h-screen ${gradients.background}`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Progress Bar */}
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <h1 className="text-2xl font-bold text-blue-300">Business Journey</h1>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={fillTestDataOnly}
+                                className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300 text-xs"
+                            >
+                                🧪 Fill Data
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={fillTestData}
+                                className="bg-green-100 hover:bg-green-200 text-green-800 border-green-300 text-xs"
+                            >
+                                ⚡ Complete
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Progress Steps */}
+                    {/* Left Column - Steps Overview */}
                     <div className="lg:col-span-1">
                         <Card padding="md">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-gray-900">Your Business Journey</h2>
-                            </div>
-                            <div className="flex gap-2 mb-6">
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={fillTestDataOnly}
-                                    className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300 text-xs flex-1"
-                                >
-                                    🧪 Fill Data
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={fillTestData}
-                                    className="bg-green-100 hover:bg-green-200 text-green-800 border-green-300 text-xs flex-1"
-                                >
-                                    ⚡ Complete
-                                </Button>
-                            </div>
+                            <h2 className="text-xl font-bold text-blue-300 mb-6">Your Journey</h2>
                             <div className="space-y-4">
                                 {journeySteps.map((step, index) => (
-                                    <StepItem
+                                    <div
                                         key={step.id}
-                                        step={step}
-                                        status={getStepStatus(step)}
+                                        className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${index === currentStep
+                                            ? 'bg-blue-900/20 border-blue-400 shadow-lg'
+                                            : index < currentStep
+                                                ? 'bg-green-900/20 border-green-400'
+                                                : 'bg-gray-800/20 border-gray-600'
+                                            }`}
                                         onClick={() => setCurrentStep(index)}
-                                    />
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${index < currentStep
+                                                ? 'bg-green-500 text-white'
+                                                : index === currentStep
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-gray-600 text-gray-300'
+                                                }`}>
+                                                {index < currentStep ? '✓' : step.icon}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className={`font-semibold ${index < currentStep ? 'text-green-300' :
+                                                    index === currentStep ? 'text-blue-300' : 'text-gray-400'
+                                                    }`}>
+                                                    {step.title}
+                                                </h3>
+                                                <p className="text-sm text-gray-400">{step.subtitle}</p>
+                                            </div>
+                                        </div>
+                                        {index === currentStep && (
+                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                         </Card>
                     </div>
 
-                    {/* Current Step Content */}
+                    {/* Right Column - Current Step */}
                     <div className="lg:col-span-2">
                         <Card>
                             <div className="mb-6">
@@ -780,18 +811,18 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                         {currentStepData.icon}
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">{currentStepData.title}</h2>
-                                        <p className="text-gray-600">{currentStepData.subtitle}</p>
+                                        <h2 className="text-2xl font-bold text-blue-300">{currentStepData.title}</h2>
+                                        <p className="text-gray-400">{currentStepData.subtitle}</p>
                                     </div>
                                 </div>
-                                <p className="text-gray-700 leading-relaxed">{currentStepData.description}</p>
+                                <p className="text-gray-300 leading-relaxed">{currentStepData.description}</p>
                             </div>
 
                             {/* Questions */}
                             <div className="space-y-6 mb-8">
                                 {currentStepData.questions.map((question) => (
                                     <div key={question.id} className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-300">
                                             {question.label}
                                             {question.required && <span className="text-red-500 ml-1">*</span>}
                                         </label>
@@ -800,31 +831,23 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                 ))}
                             </div>
 
-                            {/* AI Mentor Section - Only show for steps 2-5 */}
-                            {currentStepData.id > 1 && (
-                                <AIMentor
-                                    message="Hi! I'm your growth mentor. I'm here to help you discover your niche and build your digital presence. Let's start by understanding your business goals and target audience. What industry are you in?"
-                                    onStartSession={handleStartSession}
-                                    onLearnMore={handleLearnMore}
-                                    className="mb-6"
-                                />
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex space-x-4">
+                            {/* Navigation Buttons */}
+                            <div className="flex justify-between">
+                                <Button
+                                    variant="secondary"
+                                    size="lg"
+                                    onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                                    disabled={currentStep === 0}
+                                >
+                                    Previous
+                                </Button>
                                 <Button
                                     variant="primary"
                                     size="lg"
                                     onClick={() => handleStepComplete(currentStepData.id)}
                                     disabled={!isCurrentStepComplete}
                                 >
-                                    Complete Step
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    size="lg"
-                                >
-                                    Save Progress
+                                    {currentStep === journeySteps.length - 1 ? 'Complete Journey' : 'Next Step'}
                                 </Button>
                             </div>
                         </Card>

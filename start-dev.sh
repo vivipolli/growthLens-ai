@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting Hedera Growth Platform Development Environment..."
+echo "🚀 Starting GrowthLens AI Development Environment..."
 
 # Function to check if a port is in use
 check_port() {

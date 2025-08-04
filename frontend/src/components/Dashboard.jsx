@@ -134,10 +134,10 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                             size="sm"
                             onClick={() => navigate('/progress')}
                         >
-                            📊 Ver Meu Progresso
+                            📊 See My Progress
                         </Button>
                         <span className="text-sm text-gray-600">
-                            Acompanhe suas conquistas e metas
+                            Track your achievements and goals
                         </span>
                     </div>
                 </div>

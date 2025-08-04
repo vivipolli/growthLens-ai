@@ -280,7 +280,7 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                         value={value}
                         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                         placeholder={question.placeholder}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-gray-200"
                     />
                 )
 
@@ -289,7 +289,7 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                     <select
                         value={value}
                         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-gray-200"
                     >
                         <option value="">Select an option</option>
                         {question.options.map((option, index) => (
@@ -316,12 +316,12 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                                             handleAnswerChange(question.id, selectedValues.filter(v => v !== option))
                                         }
                                     }}
-                                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="w-4 h-4 text-blue-600 border-gray-600 rounded focus:ring-blue-500"
                                 />
-                                <span className="text-gray-700">{option}</span>
+                                <span className="text-gray-300">{option}</span>
                             </label>
                         ))}
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-400">
                             Selected: {selectedValues.length}/{question.maxSelections}
                         </p>
                     </div>
@@ -334,7 +334,7 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                         placeholder={question.placeholder}
                         rows={4}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                        className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-800 text-gray-200 resize-none"
                     />
                 )
 
@@ -347,18 +347,18 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
     const isCurrentStepComplete = isStepComplete(currentStepData)
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+        <div className={`min-h-screen ${gradients.background}`}>
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Progress Bar */}
+                {/* Header */}
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-4">
-                        <h1 className="text-2xl font-bold text-gray-900">Personal Discovery</h1>
+                        <h1 className="text-2xl font-bold text-blue-300">Personal Discovery</h1>
                         <div className="flex gap-2">
                             <Button
                                 variant="secondary"
                                 size="sm"
                                 onClick={fillTestDataOnly}
-                                className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300 text-xs"
+                                className="bg-blue-900/20 hover:bg-blue-800/30 text-blue-300 border-blue-400 text-xs"
                             >
                                 🧪 Fill Data
                             </Button>
@@ -366,21 +366,11 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                                 variant="secondary"
                                 size="sm"
                                 onClick={fillTestData}
-                                className="bg-green-100 hover:bg-green-200 text-green-800 border-green-300 text-xs"
+                                className="bg-green-900/20 hover:bg-green-800/30 text-green-300 border-green-400 text-xs"
                             >
                                 ⚡ Complete
                             </Button>
                         </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                            className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
-                            style={{ width: `${progress}%` }}
-                        ></div>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-500 mt-2">
-                        <span>Personal Discovery</span>
-                        <span>{currentStep + 1} of {personalSteps.length}</span>
                     </div>
                 </div>
 
@@ -388,16 +378,16 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                     {/* Left Column - Steps Overview */}
                     <div className="lg:col-span-1">
                         <Card padding="md">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Your Journey</h2>
+                            <h2 className="text-xl font-bold text-blue-300 mb-6">Your Journey</h2>
                             <div className="space-y-4">
                                 {personalSteps.map((step, index) => (
                                     <div
                                         key={step.id}
                                         className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${index === currentStep
-                                            ? 'bg-purple-50 border-purple-300 shadow-lg'
+                                            ? 'bg-blue-900/20 border-blue-400 shadow-lg'
                                             : index < currentStep
-                                                ? 'bg-green-50 border-green-200'
-                                                : 'bg-gray-50 border-gray-200'
+                                                ? 'bg-green-900/20 border-green-400'
+                                                : 'bg-gray-800/20 border-gray-600'
                                             }`}
                                         onClick={() => setCurrentStep(index)}
                                     >
@@ -405,22 +395,22 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${index < currentStep
                                                 ? 'bg-green-500 text-white'
                                                 : index === currentStep
-                                                    ? 'bg-purple-500 text-white'
-                                                    : 'bg-gray-300 text-gray-600'
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-gray-600 text-gray-300'
                                                 }`}>
                                                 {index < currentStep ? '✓' : step.icon}
                                             </div>
                                             <div className="flex-1">
-                                                <h3 className={`font-semibold ${index < currentStep ? 'text-green-800' :
-                                                    index === currentStep ? 'text-purple-800' : 'text-gray-600'
+                                                <h3 className={`font-semibold ${index < currentStep ? 'text-green-300' :
+                                                    index === currentStep ? 'text-blue-300' : 'text-gray-400'
                                                     }`}>
                                                     {step.title}
                                                 </h3>
-                                                <p className="text-sm text-gray-500">{step.subtitle}</p>
+                                                <p className="text-sm text-gray-400">{step.subtitle}</p>
                                             </div>
                                         </div>
                                         {index === currentStep && (
-                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                                         )}
                                     </div>
                                 ))}
@@ -437,18 +427,18 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                                         {currentStepData.icon}
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">{currentStepData.title}</h2>
-                                        <p className="text-gray-600">{currentStepData.subtitle}</p>
+                                        <h2 className="text-2xl font-bold text-blue-300">{currentStepData.title}</h2>
+                                        <p className="text-gray-400">{currentStepData.subtitle}</p>
                                     </div>
                                 </div>
-                                <p className="text-gray-700 leading-relaxed">{currentStepData.description}</p>
+                                <p className="text-gray-300 leading-relaxed">{currentStepData.description}</p>
                             </div>
 
                             {/* Questions */}
                             <div className="space-y-6 mb-8">
                                 {currentStepData.questions.map((question) => (
                                     <div key={question.id} className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-300">
                                             {question.label}
                                             {question.required && <span className="text-red-500 ml-1">*</span>}
                                         </label>

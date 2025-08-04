@@ -1,250 +1,209 @@
-# 🚀 Hedera Growth Platform
+# 🚀 GrowthLens AI - Hedera Hackathon Project
 
-Uma plataforma de coaching empresarial com IA integrada à blockchain Hedera para armazenamento imutável de dados.
+An innovative business coaching platform that combines **Artificial Intelligence** with **Hedera blockchain** to create a unique business development experience.
 
-## ✨ Funcionalidades
+## 🎯 **Overview**
 
-- 🔐 **Autenticação com Clerk**
-- 🤖 **IA Generativa** (OpenRouter/Mistral)
-- ⛓️ **Blockchain Hedera** para dados imutáveis
-- 📊 **Dashboard Personalizado**
-- 🎯 **Missões Diárias** geradas por IA
-- 📈 **Insights de Negócio**
-- 🔄 **Onboarding Completo**
+GrowthLens AI is a complete solution that uses **Hedera Consensus Service (HCS)** to store immutable user data, business profiles, AI insights, and completed missions. The platform offers personalized AI-based coaching that evolves with the user's history stored on the blockchain.
 
-## 🛠️ Tecnologias
+## ⛓️ **Hedera Services Used**
 
-### Frontend
-- **React 18** + Vite
-- **Clerk** (Autenticação)
-- **Tailwind CSS** (Estilização)
-- **React Router** (Navegação)
+### **Hedera Consensus Service (HCS) - Topics**
+- **Immutable Storage**: All user data is stored in HCS topics
+- **Data Types**:
+  - `user_profile`: Personal and professional profile
+  - `business_data`: Business information
+  - `ai_insight`: AI-generated insights
+  - `mission_completion`: Completed missions and goals
+  - `daily_missions`: Daily missions
+  - `weekly_goals`: Weekly goals
+  - `business_observations`: Business observations
 
-### Backend
-- **Node.js** + Express
-- **TypeScript**
-- **Hedera SDK** (Blockchain)
-- **LangChain** (IA)
-- **OpenRouter** (Modelos IA)
+### **Mirror Node API**
+- **Historical Query**: Retrieval of historical data from blockchain
+- **Message Reconstruction**: Intelligent system to reconstruct fragmented messages
+- **Integrity Validation**: Verification of stored data
 
-### Blockchain
-- **Hedera Consensus Service (HCS)**
-- **Mirror Node API**
-- **Tópicos para dados imutáveis**
+## 🤖 **AI Integration**
 
-## 🚀 Início Rápido
+### **OpenRouter + LangChain**
+- **Models**: GPT-3.5-turbo, Claude-3.5-sonnet
+- **Historical Context**: AI analyzes complete user history from blockchain
+- **Personalized Insights**: Coaching based on real business data
+- **Continuous Evolution**: AI learns from each stored interaction
 
-### 1. Clone o Repositório
-```bash
-git clone <repository-url>
-cd hedera-growth
+### **Types of Generated Insights**
+- **Marketing Strategy**: Target audience and channel analysis
+- **Financial Optimization**: Cost and revenue management
+- **Business Expansion**: Growth opportunities
+- **Team Management**: Leadership development
+- **Innovation**: New technologies and trends
+
+## 🏗️ **System Architecture**
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │   Hedera        │
+│   (React)       │◄──►│   (Node.js)     │◄──►│   Blockchain    │
+│                 │    │                 │    │                 │
+│ • Clerk Auth    │    │ • JWT Auth      │    │ • HCS Topics    │
+│ • Dashboard     │    │ • AI Service    │    │ • Mirror Node   │
+│ • Onboarding    │    │ • Topic Service │    │ • Account Mgmt  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### 2. Instale as Dependências
+### **Data Flow**
+1. **Registration**: User creates account → Hedera account created automatically
+2. **Onboarding**: Data saved in user-specific HCS topics
+3. **AI Coaching**: System queries blockchain history → Generates personalized insights
+4. **Evolution**: New insights and missions continuously stored
+
+## 🚀 **How to Run**
+
+### **1. Prerequisites**
 ```bash
+# Node.js 18+
+# Hedera Testnet Account
+# OpenRouter API Keys
+```
+
+### **2. Setup**
+```bash
+# Clone and install
+git clone <repository-url>
+cd hedera-growth
+
 # Backend
 cd backend
 npm install
+cp .env.example .env
+# Configure HEDERA_ACCOUNT_ID, HEDERA_PRIVATE_KEY, OPENROUTER_API_KEY
 
 # Frontend
 cd ../frontend
 npm install
-```
-
-### 3. Configure as Variáveis de Ambiente
-
-#### Backend (.env)
-```bash
-cd backend
 cp .env.example .env
+# Configure VITE_CLERK_PUBLISHABLE_KEY
 ```
 
-Edite `backend/.env`:
-```env
-HEDERA_ACCOUNT_ID=0.0.5904577
-HEDERA_PRIVATE_KEY=3030020100300706052b8104000a04220420c724367867456a2b93ca53ec34e50650de938bb83e9f2b714213a8de5bd25dce
-HEDERA_NETWORK=testnet
-
-OPENROUTER_API_KEY=sk-or-v1-your-key-here
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free
-
-PORT=3001
-```
-
-#### Frontend (.env)
+### **3. Start Servers**
 ```bash
-cd frontend
-cp .env.example .env
-```
-
-Edite `frontend/.env`:
-```env
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_your-clerk-key
-VITE_API_URL=http://localhost:3001
-```
-
-### 4. Inicie os Servidores
-
-#### Opção A: Script Automático
-```bash
+# Automatic script
 ./start-dev.sh
+
+# Or manually
+cd backend && npm run dev
+cd frontend && npm run dev
 ```
 
-#### Opção B: Manual
-```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
+### **4. Access**
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3001
 
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
-```
+## 🔧 **Hedera Configuration**
 
-### 5. Acesse a Aplicação
-- **Frontend:** http://localhost:5173
-- **Backend Health:** http://localhost:3001/api/agent/health
+### **Create Testnet Account**
+1. Visit: https://portal.hedera.com/
+2. **Network**: Testnet
+3. **Initial Balance**: 2 HBAR
 
-## 🔑 Configuração Hedera
-
-### Criar Conta Testnet
-1. Acesse: https://portal.hedera.com/
-2. Clique em "Create Account"
-3. Configure:
-   - **Network:** Testnet
-   - **Account Type:** Individual
-   - **Initial Balance:** 2 HBAR
-
-### Obter Credenciais
-Após criar a conta, você receberá:
-- **Account ID** (ex: `0.0.1234567`)
-- **Private Key** (formato DER)
-
-### Atualizar .env
+### **Configure .env**
 ```env
 HEDERA_ACCOUNT_ID=0.0.1234567
 HEDERA_PRIVATE_KEY=3030020100300706052b8104000a04220420...
+HEDERA_NETWORK=testnet
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
 ```
 
-## 🧪 Testes
+## 📊 **Main Features**
 
-### Testar Blockchain
+### **🔐 Hybrid Authentication**
+- **Clerk**: Frontend authentication
+- **JWT**: Backend session management
+- **Hedera**: Automatic account creation
+
+### **🤖 Contextual AI**
+- **Complete History**: Queries blockchain data
+- **Personalized Insights**: Based on real user profile
+- **Continuous Evolution**: Learns from each interaction
+
+### **📈 Intelligent Dashboard**
+- **Daily Missions**: AI-generated
+- **Visual Progress**: Based on real data
+- **Real-time Insights**: Updated from blockchain
+
+### **🎯 Complete Onboarding**
+- **Personal Discovery**: Profile and motivations
+- **Business Journey**: Company data
+- **Secure Storage**: All data on blockchain
+
+## 🧪 **Blockchain Testing**
+
+### **Save Data**
 ```bash
-# Salvar perfil
-curl -X POST http://localhost:3001/api/business/profile/save \
+# User profile
+curl -X POST http://localhost:3001/api/auth/profile/test/blockchain/store \
   -H "Content-Type: application/json" \
-  -d '{"userId":"test","profileData":{"name":"Test User"}}'
+  -d '{"personal":{"name":"Test User"},"business":{"industry":"Tech"}}'
 
-# Salvar dados de negócio
-curl -X POST http://localhost:3001/api/business/business/save \
+# AI insights
+curl -X POST http://localhost:3001/api/business/insights/generate \
   -H "Content-Type: application/json" \
-  -d '{"userId":"test","businessData":{"company":"Test Corp"}}'
-
-# Salvar missão concluída
-curl -X POST http://localhost:3001/api/business/mission/save \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"test","missionData":{"missionId":"1","completed":true}}'
+  -d '{"userProfile":{"personal":{"name":"Test"}},"insightType":"marketing"}'
 ```
 
-### Verificar na Blockchain
-- Acesse: https://hashscan.io/testnet
-- Cole o Transaction ID retornado
+### **Verify on Blockchain**
+- **HashScan**: https://hashscan.io/testnet
+- **Mirror Node**: https://testnet.mirrornode.hedera.com/
 
-## 📁 Estrutura do Projeto
+## 📁 **Project Structure**
 
 ```
 hedera-growth/
 ├── frontend/                 # React App
 │   ├── src/
-│   │   ├── components/      # Componentes React
-│   │   ├── hooks/          # Custom Hooks
-│   │   ├── services/       # Serviços Frontend
-│   │   └── utils/          # Utilitários
-│   └── public/
+│   │   ├── components/      # UI Components
+│   │   ├── hooks/          # Blockchain Data Hooks
+│   │   └── services/       # Frontend Services
 ├── backend/                  # Node.js API
 │   ├── src/
-│   │   ├── controllers/    # Controladores API
-│   │   ├── services/       # Serviços Backend
-│   │   ├── routes/         # Rotas API
-│   │   └── config/         # Configurações
-│   └── scripts/            # Scripts Utilitários
-└── docs/                    # Documentação
+│   │   ├── services/
+│   │   │   ├── hederaTopicService.ts    # HCS Integration
+│   │   │   ├── businessCoachingService.ts # AI + Blockchain
+│   │   │   └── aiService.ts             # LangChain
+│   │   ├── controllers/     # API Controllers
+│   │   └── routes/         # API Routes
+│   └── data/               # Local Topic Storage
+└── docs/                    # Documentation
 ```
 
-## 🔧 Scripts Úteis
+## 🎯 **Hackathon Differentiators**
 
-### Gerar Chave Hedera
-```bash
-cd backend
-node scripts/generate-hedera-key.js
-```
+### **✅ Implemented**
+- **HCS Topics**: Immutable data storage
+- **AI Integration**: LangChain + OpenRouter
+- **Mirror Node**: Historical data query
+- **User Management**: Automatic Hedera accounts
+- **Real-time Dashboard**: Blockchain data
+- **Complete Onboarding**: Profile + Business
 
-### Criar Conta Hedera
-```bash
-cd backend
-node scripts/create-hedera-account.js
-```
+### **🚀 Next Steps**
+- **Smart Contracts**: Business logic on blockchain
+- **Token Economics**: Rewards for completed missions
 
-### Iniciar Ambiente de Desenvolvimento
-```bash
-./start-dev.sh
-```
 
-## 🐛 Solução de Problemas
+## 🤝 **Contribution**
 
-### Erro de Conexão
-```bash
-# Verificar se servidores estão rodando
-curl http://localhost:3001/api/agent/health
-curl http://localhost:5173
-```
+1. Fork the project
+2. Create a branch: `git checkout -b feature/new-feature`
+3. Commit: `git commit -m 'Add new feature'`
+4. Push: `git push origin feature/new-feature`
+5. Open a Pull Request
 
-### Erro de Chave Privada
-```bash
-# Gerar nova chave
-cd backend
-node scripts/generate-hedera-key.js
-```
+## 📄 **License**
 
-### Limpar Cache
-```bash
-# Frontend
-cd frontend
-rm -rf node_modules/.vite
-npm run dev
+MIT License - see `LICENSE` for details.
 
-# Backend
-cd backend
-rm -rf dist
-npm run dev
-```
+---
 
-## 📊 Monitoramento
-
-### Logs do Backend
-```bash
-tail -f backend/logs/*.log
-```
-
-### Status da Blockchain
-- **HashScan:** https://hashscan.io/testnet
-- **Mirror Node:** https://testnet.mirrornode.hedera.com/
-
-## 🤝 Contribuição
-
-1. Fork o projeto
-2. Crie uma branch: `git checkout -b feature/nova-funcionalidade`
-3. Commit: `git commit -m 'Adiciona nova funcionalidade'`
-4. Push: `git push origin feature/nova-funcionalidade`
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
-## 🆘 Suporte
-
-- **Issues:** GitHub Issues
-- **Documentação:** `/docs`
-- **Hedera Docs:** https://docs.hedera.com/ 
+**🎉 Status**: ✅ **Hackathon Ready** - Complete system working with Hedera HCS! 

@@ -1,5 +1,5 @@
 {
-  "name": "hedera-ai-agent-backend",
+  "name": "growthlens-ai-backend",
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
@@ -16,7 +16,7 @@
   ],
   "author": "",
   "license": "ISC",
-  "description": "REST API for Hedera AI Agent Kit",
+  "description": "REST API for GrowthLens AI Platform",
   "dependencies": {
     "@hashgraph/sdk": "^2.67.0",
     "@langchain/community": "^0.3.47",

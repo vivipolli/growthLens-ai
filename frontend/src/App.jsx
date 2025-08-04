@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { ClerkProvider, useAuth, SignedIn, SignedOut, SignIn } from '@clerk/clerk-react'
 import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom'
-import { JourneyManager, PersonalOnboarding, BusinessOnboarding, Header } from './components'
+import { JourneyManager, PersonalOnboarding, BusinessOnboarding, Header, ProgressPage } from './components'
 
 // Clerk publishable key (in production, use environment variable)
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_demo_key'
@@ -220,6 +220,23 @@ function AppContent() {
                   <div>
                     <Header />
                     <BusinessOnboardingWrapper />
+                  </div>
+                </SignedIn>
+                <SignedOut>
+                  <Navigate to="/sign-in" replace />
+                </SignedOut>
+              </>
+            }
+          />
+
+          <Route
+            path="/progress"
+            element={
+              <>
+                <SignedIn>
+                  <div>
+                    <Header />
+                    <ProgressPage />
                   </div>
                 </SignedIn>
                 <SignedOut>

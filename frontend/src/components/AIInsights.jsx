@@ -97,7 +97,12 @@ const AIInsights = () => {
 
     const filteredInsights = activeFilter === 'all'
         ? insights
-        : insights.filter(insight => insight.priority === activeFilter)
+        : insights.filter(insightGroup =>
+            insightGroup.insights && insightGroup.insights.some(insight => insight.priority === activeFilter)
+        ).map(insightGroup => ({
+            ...insightGroup,
+            insights: insightGroup.insights.filter(insight => insight.priority === activeFilter)
+        }))
 
     const handleInsightAction = (insightId) => {
         console.log('Taking action on insight:', insightId)
@@ -111,12 +116,14 @@ const AIInsights = () => {
         <Card>
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">AI Insights</h2>
-                    <p className="text-sm text-gray-600">Data-driven recommendations for your growth</p>
+                    <h2 className="text-xl font-bold text-gray-900">Business Observations</h2>
+                    <p className="text-sm text-gray-600">Strategic insights and recommendations for your business</p>
                 </div>
                 <div className="text-right">
-                    <div className="text-2xl font-bold text-purple-600">{insights.length}</div>
-                    <div className="text-sm text-gray-500">insights</div>
+                    <div className="text-2xl font-bold text-purple-600">
+                        {insights.reduce((total, group) => total + (group.insights?.length || 0), 0)}
+                    </div>
+                    <div className="text-sm text-gray-500">observations</div>
                 </div>
             </div>
 
@@ -137,52 +144,82 @@ const AIInsights = () => {
             </div>
 
             <div className="space-y-4">
-                {filteredInsights.map((insight) => (
-                    <div
-                        key={insight.id}
-                        className={`p-4 rounded-lg border-l-4 ${getPriorityColor(insight.priority)}`}
-                    >
-                        <div className="flex items-start space-x-3">
-                            <div className={`w-10 h-10 bg-gradient-to-r ${getCategoryColor(insight.category)} rounded-lg flex items-center justify-center text-white text-lg`}>
-                                {getInsightIcon(insight.type)}
+                {filteredInsights.map((insightGroup, groupIndex) => (
+                    <div key={groupIndex} className="space-y-3">
+                        {/* Summary and personalized message */}
+                        {insightGroup.summary && (
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-sm text-blue-800 font-medium">{insightGroup.summary}</p>
+                                {insightGroup.personalizedMessage && (
+                                    <p className="text-xs text-blue-600 mt-1">{insightGroup.personalizedMessage}</p>
+                                )}
                             </div>
+                        )}
 
-                            <div className="flex-1">
-                                <div className="flex items-start justify-between mb-2">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900">{insight.title}</h3>
-                                        <p className="text-sm text-gray-700 mt-1">{insight.content}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => handleDismissInsight(insight.id)}
-                                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-xs text-gray-500">Impact:</span>
-                                            <span className="text-xs font-medium text-green-600">{insight.impact}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-xs text-gray-500">Confidence:</span>
-                                            <span className="text-xs font-medium text-purple-600">{insight.confidence}%</span>
-                                        </div>
+                        {/* Individual insights */}
+                        {insightGroup.insights && insightGroup.insights.map((insight, insightIndex) => (
+                            <div
+                                key={`${groupIndex}-${insightIndex}`}
+                                className={`p-4 rounded-lg border-l-4 ${getPriorityColor(insight.priority)}`}
+                            >
+                                <div className="flex items-start space-x-3">
+                                    <div className={`w-10 h-10 bg-gradient-to-r ${getCategoryColor(insight.category)} rounded-lg flex items-center justify-center text-white text-lg`}>
+                                        {getInsightIcon(insight.type)}
                                     </div>
 
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() => handleInsightAction(insight.id)}
-                                    >
-                                        {insight.action}
-                                    </Button>
+                                    <div className="flex-1">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-900">{insight.title}</h3>
+                                                <p className="text-sm text-gray-700 mt-1">{insight.content}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDismissInsight(insight.id)}
+                                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-4">
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-xs text-gray-500">Impact:</span>
+                                                    <span className="text-xs font-medium text-green-600">{insight.impact}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-xs text-gray-500">Confidence:</span>
+                                                    <span className="text-xs font-medium text-purple-600">{insight.confidence}%</span>
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                onClick={() => handleInsightAction(insight.id)}
+                                            >
+                                                {insight.action}
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ))}
+
+                        {/* Next steps */}
+                        {insightGroup.nextSteps && insightGroup.nextSteps.length > 0 && (
+                            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                <h4 className="text-sm font-medium text-green-800 mb-2">Next Steps:</h4>
+                                <ul className="text-xs text-green-700 space-y-1">
+                                    {insightGroup.nextSteps.map((step, stepIndex) => (
+                                        <li key={stepIndex} className="flex items-center">
+                                            <span className="mr-2">•</span>
+                                            {step}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

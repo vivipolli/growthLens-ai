@@ -614,7 +614,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                             <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                                                 <span className="text-2xl">🤖</span>
                                             </div>
-                                            <h4 className="font-semibold text-gray-900 mb-2">AI Insights</h4>
+                                            <h4 className="font-semibold text-gray-900 mb-2">Business Observations</h4>
                                             <p className="text-sm text-gray-600">Get personalized recommendations based on your data</p>
                                         </div>
                                         <div className="text-center">

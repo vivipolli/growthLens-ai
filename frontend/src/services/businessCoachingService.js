@@ -67,9 +67,9 @@ export const businessCoachingService = {
     }
   },
 
-  // AI Insights API
-  async generateAIInsights() {
-    console.log('💡 generateAIInsights service called');
+  // Business Observations API
+  async generateBusinessObservations() {
+    console.log('💡 generateBusinessObservations service called');
     const userProfile = getUserProfile();
     
     if (!userProfile) {
@@ -77,24 +77,24 @@ export const businessCoachingService = {
       throw new Error('User profile not found. Please complete your onboarding first.');
     }
 
-    console.log('✅ User profile found for insights:', userProfile);
+    console.log('✅ User profile found for business observations:', userProfile);
 
     const payload = {
       userProfile
     };
 
-    console.log('📡 Making API call for AI insights');
+    console.log('📡 Making API call for business observations');
 
     try {
-      const response = await apiCall('/api/business/ai-insights', {
+      const response = await apiCall('/api/business/business-observations', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
       
-      console.log('📥 AI insights API response received:', response);
+      console.log('📥 Business observations API response received:', response);
       return response;
     } catch (error) {
-      console.error('❌ AI insights API call failed:', error);
+      console.error('❌ Business observations API call failed:', error);
       throw error;
     }
   },

@@ -16,5 +16,10 @@
     "topicId": "0.0.6483633",
     "createdAt": "2025-07-31T20:33:36.158Z",
     "memo": "User journey data for anonymous"
+  },
+  "undefined": {
+    "topicId": "0.0.6498672",
+    "createdAt": "2025-08-04T13:50:39.048Z",
+    "memo": "User journey data for undefined"
   }
 }

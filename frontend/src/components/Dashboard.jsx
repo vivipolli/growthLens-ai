@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
 import { useDailyMissions } from '../hooks/useDailyMissions'
 import { useBlockchainData } from '../hooks/useBlockchainData'
@@ -17,13 +18,14 @@ import { saveUserProfile } from '../utils/userProfile.js'
 const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal, onEditBusiness }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false)
     const { gradients } = useTheme()
+    const navigate = useNavigate()
 
     // Add blockchain data integration
     const userId = personalData?.name || 'anonymous'
     const { userData: blockchainData, loading: blockchainLoading } = useBlockchainData(userId)
 
     const {
-        missions,
+        dailyMissions: missions,
         weeklyGoals,
         aiInsights,
         error,
@@ -43,7 +45,7 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
         // Individual refresh functions
         generateDailyMissions,
         generateWeeklyGoals,
-        generateAIInsights
+        generateBusinessObservations
     } = useDailyMissions()
 
     useEffect(() => {
@@ -112,7 +114,7 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-black">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Blockchain Status Indicator */}
                 {blockchainData && (
@@ -123,6 +125,22 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                         </div>
                     </div>
                 )}
+
+                {/* Progress Navigation */}
+                <div className="mb-6 flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => navigate('/progress')}
+                        >
+                            📊 Ver Meu Progresso
+                        </Button>
+                        <span className="text-sm text-gray-600">
+                            Acompanhe suas conquistas e metas
+                        </span>
+                    </div>
+                </div>
 
                 {/* Main Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -284,14 +302,14 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                         {/* AI Insights */}
                         <Card>
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900">AI Insights</h2>
+                                <h2 className="text-xl font-bold text-gray-900">Business Observations</h2>
                                 <div className="flex items-center gap-2">
                                     <Button
                                         variant="secondary"
                                         size="sm"
                                         onClick={() => {
                                             console.log('🖱️ AI insights refresh button clicked');
-                                            generateAIInsights();
+                                            generateBusinessObservations();
                                         }}
                                         disabled={insightsLoading}
                                     >
@@ -308,7 +326,7 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                                 {insightsLoading ? (
                                     <InsightsLoadingSkeleton />
                                 ) : (!aiInsights || aiInsights.length === 0) ? (
-                                    <InsightsEmptyState onGenerate={generateAIInsights} />
+                                    <InsightsEmptyState onGenerate={generateBusinessObservations} />
                                 ) : (
                                     aiInsights.map((insight) => (
                                         <div

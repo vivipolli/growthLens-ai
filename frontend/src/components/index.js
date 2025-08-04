@@ -9,6 +9,7 @@ export { default as AIInsights } from './AIInsights'
 export { default as PersonalOnboarding } from './PersonalOnboarding'
 export { default as BusinessOnboarding } from './BusinessOnboarding'
 export { default as JourneyManager } from './JourneyManager'
+export { default as ProgressPage } from './ProgressPage'
 
 // Loading Skeletons
 export { 

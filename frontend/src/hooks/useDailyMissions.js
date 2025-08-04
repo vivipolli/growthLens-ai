@@ -6,6 +6,7 @@ export const useDailyMissions = () => {
   const [dailyMissions, setDailyMissions] = useState([])
   const [weeklyGoals, setWeeklyGoals] = useState([])
   const [aiInsights, setAiInsights] = useState([])
+  const [missionCompletions, setMissionCompletions] = useState([])
   const [error, setError] = useState(null)
   const [lastGenerated, setLastGenerated] = useState(null)
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
@@ -34,7 +35,54 @@ export const useDailyMissions = () => {
         
         // Use AI insights from blockchain if available
         if (blockchainData.aiInsights && blockchainData.aiInsights.length > 0) {
-          setAiInsights(blockchainData.aiInsights)
+          // Filtrar insights por tipo
+          const dailyMissionsInsights = blockchainData.aiInsights.filter(
+            insight => insight.insightType === 'daily_missions'
+          )
+          const weeklyGoalsInsights = blockchainData.aiInsights.filter(
+            insight => insight.insightType === 'weekly_goals'
+          )
+          const businessObservationsInsights = blockchainData.aiInsights.filter(
+            insight => insight.insightType === 'business_observations'
+          )
+          
+          // Converter insights filtrados para o formato esperado pelos componentes
+          if (dailyMissionsInsights.length > 0) {
+            const missions = dailyMissionsInsights[0].insights.map((insight, index) => ({
+              id: index + 1,
+              title: insight.title,
+              description: insight.content,
+              status: 'pending',
+              type: insight.category || 'strategy',
+              estimatedTime: insight.timeline || '15-60 min',
+              priority: insight.priority || 'medium',
+              category: insight.category || 'strategy'
+            }))
+            setDailyMissions(missions)
+          }
+          
+          if (weeklyGoalsInsights.length > 0) {
+            const goals = weeklyGoalsInsights[0].insights.map((insight, index) => ({
+              id: index + 1,
+              title: insight.title,
+              description: insight.content,
+              status: 'pending',
+              type: insight.category || 'strategy',
+              estimatedTime: insight.timeline || 'This week',
+              priority: insight.priority || 'medium',
+              category: insight.category || 'strategy'
+            }))
+            setWeeklyGoals(goals)
+          }
+          
+          // Manter apenas business observations para AIInsights
+          setAiInsights(businessObservationsInsights)
+        }
+        
+        // Extract mission completions from blockchain data
+        if (blockchainData.missionCompletions && blockchainData.missionCompletions.length > 0) {
+          console.log('✅ Loaded mission completions from blockchain:', blockchainData.missionCompletions.length)
+          setMissionCompletions(blockchainData.missionCompletions)
         }
         
         // For now, we'll still use the API for daily missions and weekly goals
@@ -162,8 +210,8 @@ export const useDailyMissions = () => {
     }
   }
 
-  // Generate AI Insights
-  const generateAIInsights = async () => {
+  // Generate Business Observations
+  const generateBusinessObservations = async () => {
     if (!personalData.name) {
       setError('Please complete your onboarding first')
       return
@@ -173,10 +221,10 @@ export const useDailyMissions = () => {
     setError(null)
 
     try {
-      console.log('💡 Generating AI insights...')
-      const response = await businessCoachingService.generateAIInsights()
+      console.log('💡 Generating business observations...')
+      const response = await businessCoachingService.generateBusinessObservations()
       
-      console.log('📥 AI insights API Response:', response)
+      console.log('📥 Business observations API Response:', response)
 
       let responseData = response
       if (response.success && response.data) {
@@ -186,20 +234,20 @@ export const useDailyMissions = () => {
       }
 
       if (responseData && responseData.insights) {
-        console.log('✅ AI insights generated successfully:', responseData)
+        console.log('✅ Business observations generated successfully:', responseData)
         
         const insights = responseData.insights || []
-        console.log('📊 Setting AI insights:', insights.length)
+        console.log('📊 Setting business observations:', insights.length)
         
         setAiInsights(insights)
         setLastGenerated(new Date().toISOString())
       } else {
-        console.error('❌ Invalid AI insights response format:', responseData)
-        setError('Invalid response format from AI insights API')
+        console.error('❌ Invalid business observations response format:', responseData)
+        setError('Invalid response format from business observations API')
       }
     } catch (error) {
-      console.error('❌ Error generating AI insights:', error)
-      setError(error.message || 'Failed to generate AI insights')
+      console.error('❌ Error generating business observations:', error)
+      setError(error.message || 'Failed to generate business observations')
     } finally {
       setInsightsLoading(false)
     }
@@ -222,7 +270,7 @@ export const useDailyMissions = () => {
       await Promise.all([
         generateDailyMissions(),
         generateWeeklyGoals(),
-        generateAIInsights()
+        generateBusinessObservations()
       ])
       
       console.log('✅ All data generated successfully')
@@ -281,9 +329,10 @@ export const useDailyMissions = () => {
   }, [personalData.name])
 
   return {
-    missions: dailyMissions,
+    dailyMissions,
     weeklyGoals,
     aiInsights,
+    missionCompletions,
     error,
     lastGenerated,
     hasAttemptedLoad,
@@ -294,7 +343,7 @@ export const useDailyMissions = () => {
     // Individual refresh functions
     generateDailyMissions,
     generateWeeklyGoals,
-    generateAIInsights,
+    generateBusinessObservations,
     // Legacy functions for compatibility
     generateMissions: generateAllData,
     generateAIMissions: generateAllData,

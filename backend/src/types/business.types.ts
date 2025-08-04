@@ -45,7 +45,7 @@ export interface UserProfile {
 
 export interface BusinessInsightRequest {
   userProfile: UserProfile;
-  insightType: 'content_strategy' | 'audience_growth' | 'monetization' | 'competitive_analysis' | 'goal_planning' | 'daily_missions' | 'weekly_goals' | 'ai_insights';
+  insightType: 'content_strategy' | 'audience_growth' | 'monetization' | 'competitive_analysis' | 'goal_planning' | 'daily_missions' | 'weekly_goals' | 'business_observations';
   specificQuestion?: string;
 }
 

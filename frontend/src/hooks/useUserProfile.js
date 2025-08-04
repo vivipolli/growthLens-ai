@@ -124,7 +124,7 @@ export const useUserProfile = () => {
   }, []);
 
   return {
-    profile,
+    userProfile: profile,
     profileComplete,
     loading,
     error,

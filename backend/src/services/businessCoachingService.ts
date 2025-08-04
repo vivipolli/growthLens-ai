@@ -11,14 +11,24 @@ import {
 } from '../types/business.types';
 import { v4 as uuidv4 } from 'uuid';
 import { createInstance } from './aiService';
+import { createContextualPrompt, generateInsightTypePrompt } from './prompts';
+import { HederaTopicService } from './hederaTopicService';
 
 export class BusinessCoachingService {
   private agent?: HederaConversationalAgent;
   private agentSigner?: ServerSigner;
   private aiLLM?: any;
+  private hederaTopicService: HederaTopicService;
+
+  constructor() {
+    this.hederaTopicService = new HederaTopicService();
+  }
 
   async initialize() {
     console.log('🔄 BusinessCoachingService: Starting initialization...');
+    
+    // Initialize Hedera Topic Service
+    await this.hederaTopicService.initialize();
     
     this.agentSigner = new ServerSigner(
       config.hedera.accountId,
@@ -42,268 +52,13 @@ export class BusinessCoachingService {
         baseURL: config.openai.baseURL,
         apiKey: config.openai.apiKey
       });
+      
       console.log('✅ BusinessCoachingService: LangChain AI service initialized successfully');
+      console.log('✅ BusinessCoachingService: aiLLM instance:', typeof this.aiLLM);
     } catch (error) {
       console.error('❌ BusinessCoachingService: Failed to initialize AI service:', error);
       console.log('⚠️  AI features will be disabled, but service will continue running');
     }
-  }
-
-  private createContextualPrompt(userProfile: UserProfile, insightType: string, specificQuestion?: string): string {
-    const { personal, business } = userProfile;
-    
-    const contextPrompt = `
-You are an expert business coach and mentor specializing in digital businesses and autonomous professionals.
-
-PERSONAL CONTEXT:
-- Location: ${personal.location || 'Not specified'}
-- Age: ${personal.age || 'Not specified'}
-- Primary motivation: ${personal.primary_motivation || 'Not specified'}
-- Biggest challenge: ${personal.biggest_challenge || 'Not specified'}
-- Success definition: ${personal.success_definition || 'Not specified'}
-- Core values: ${personal.core_values && Array.isArray(personal.core_values) ? personal.core_values.join(', ') : 'Not specified'}
-- Work style: ${personal.work_style || 'Not specified'}
-- Dream lifestyle: ${personal.dream_lifestyle || 'Not specified'}
-- Impact goal: ${personal.impact_goal || 'Not specified'}
-- Main fear: ${personal.fear || 'Not specified'}
-
-BUSINESS CONTEXT:
-- Industry: ${business.industry || 'Not specified'}
-- Target audience: ${business.target_audience?.age_range || 'Not specified'}, ${business.target_audience?.gender || 'Not specified'}, ${business.target_audience?.income_level || 'Not specified'}
-- Customer location: ${business.target_audience?.location || 'Not specified'}
-- Customer pain points: ${business.target_audience?.pain_points || 'Not specified'}
-- Customer goals: ${business.target_audience?.goals_aspirations || 'Not specified'}
-- Main offer: ${business.main_offer || 'Not specified'}
-- Competitive gaps identified: ${business.content_analysis?.competitive_gaps || 'Not analyzed yet'}
-
-Based on this context, provide ${insightType} insights and recommendations.
-${specificQuestion ? `Specific question: ${specificQuestion}` : ''}
-
-Respond with PRACTICAL, ACTIONABLE advice that:
-1. Addresses their specific situation and challenges
-2. Aligns with their values and work style
-3. Considers their target audience
-4. Provides concrete next steps
-5. Acknowledges their fears while encouraging growth
-
-Be encouraging but realistic. Focus on scalable digital strategies.
-`;
-
-    return contextPrompt;
-  }
-
-  private generateInsightTypePrompt(insightType: string): string {
-    const prompts: Record<string, string> = {
-      daily_missions: `
-Generate exactly 5 DAILY MISSIONS for TODAY that are actionable, quick tasks (15-60 minutes each).
-
-CRITICAL: Respond ONLY with exactly 5 missions in this exact format:
-
-1. **Mission Title** (e.g., "Create Instagram Story", "Research Competitors", "Update LinkedIn Profile")
-   Description: Specific, actionable task for today. Be concrete and clear about what to do.
-   Time: 15-60 minutes
-   Priority: high/medium/low
-   Category: content/social/analytics/strategy/growth/networking
-
-2. **Mission Title**
-   Description: Specific, actionable task for today.
-   Time: 15-60 minutes
-   Priority: high/medium/low
-   Category: content/social/analytics/strategy/growth/networking
-
-3. **Mission Title**
-   Description: Specific, actionable task for today.
-   Time: 15-60 minutes
-   Priority: high/medium/low
-   Category: content/social/analytics/strategy/growth/networking
-
-4. **Mission Title**
-   Description: Specific, actionable task for today.
-   Time: 15-60 minutes
-   Priority: high/medium/low
-   Category: content/social/analytics/strategy/growth/networking
-
-5. **Mission Title**
-   Description: Specific, actionable task for today.
-   Time: 15-60 minutes
-   Priority: high/medium/low
-   Category: content/social/analytics/strategy/growth/networking
-
-Examples of good missions:
-- "Post Instagram story about your morning routine"
-- "Research 3 competitors' pricing strategies"
-- "Update LinkedIn profile with recent achievements"
-- "Create 3 content ideas for next week"
-- "Engage with 5 posts from your target audience"
-
-IMPORTANT: Do NOT include any introductory text, explanations, or summaries. Start directly with "1. **Mission Title**" and end after the 5th mission.
-`,
-      weekly_goals: `
-Generate exactly 4 WEEKLY GOALS that are specific, measurable objectives for this week.
-
-CRITICAL: Respond ONLY with exactly 4 goals in this exact format:
-
-1. **Weekly Goal Title** (e.g., "Increase Instagram Followers", "Create 5 Blog Posts", "Generate 10 Leads")
-   Description: Specific, measurable outcome for this week. Include clear success criteria.
-   Target: [specific number] (e.g., 50, 5, 10, 1000)
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-2. **Weekly Goal Title**
-   Description: Specific, measurable outcome for this week.
-   Target: [specific number]
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-3. **Weekly Goal Title**
-   Description: Specific, measurable outcome for this week.
-   Target: [specific number]
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-4. **Weekly Goal Title**
-   Description: Specific, measurable outcome for this week.
-   Target: [specific number]
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-Examples of good weekly goals:
-- "Increase Instagram followers by 50"
-- "Create 5 blog posts for content calendar"
-- "Generate 10 qualified leads"
-- "Achieve 1000 website visitors"
-
-NO additional text, explanations, or summaries.
-`,
-      ai_insights: `
-Generate exactly 5 AI INSIGHTS about their business that are strategic observations and recommendations.
-
-CRITICAL: Respond ONLY with exactly 5 insights in this exact format:
-
-1. **Insight Title** (e.g., "Market Opportunity", "Competitive Advantage", "Growth Strategy")
-   Description: Strategic business insight, market observation, or actionable recommendation. Be specific and relevant to their industry and situation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
-
-2. **Insight Title**
-   Description: Strategic business insight, market observation, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
-
-3. **Insight Title**
-   Description: Strategic business insight, market observation, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
-
-4. **Insight Title**
-   Description: Strategic business insight, market observation, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
-
-5. **Insight Title**
-   Description: Strategic business insight, market observation, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
-
-Examples of good insights:
-- "Your target audience is increasingly consuming video content - consider adding video to your content strategy"
-- "Competitors are using subscription models - you could differentiate with one-time premium services"
-- "There's an untapped market segment in [specific demographic] that aligns with your values"
-- "Your industry is shifting towards [trend] - early adoption could give you a competitive advantage"
-- "Your current pricing strategy leaves room for premium positioning"
-
-NO additional text, explanations, or summaries.
-`,
-      content_strategy: `
-Generate exactly 5 CONTENT STRATEGY insights focusing on:
-- Content themes that resonate with their target audience
-- Optimal content formats for their industry
-- Engagement strategies based on their audience pain points
-- Content calendar suggestions
-- Platform-specific recommendations
-
-CRITICAL: Respond ONLY with exactly 5 insights in this exact format:
-
-1. **Content Strategy Title**
-   Description: Specific content strategy insight or recommendation.
-   Type: strategy/tip/opportunity
-   Priority: high/medium/low
-   Category: content/strategy/engagement
-
-2. **Content Strategy Title**
-   Description: Specific content strategy insight or recommendation.
-   Type: strategy/tip/opportunity
-   Priority: high/medium/low
-   Category: content/strategy/engagement
-
-3. **Content Strategy Title**
-   Description: Specific content strategy insight or recommendation.
-   Type: strategy/tip/opportunity
-   Priority: high/medium/low
-   Category: content/strategy/engagement
-
-4. **Content Strategy Title**
-   Description: Specific content strategy insight or recommendation.
-   Type: strategy/tip/opportunity
-   Priority: high/medium/low
-   Category: content/strategy/engagement
-
-5. **Content Strategy Title**
-   Description: Specific content strategy insight or recommendation.
-   Type: strategy/tip/opportunity
-   Priority: high/medium/low
-   Category: content/strategy/engagement
-
-NO additional text, explanations, or summaries.
-`,
-      audience_growth: `
-Generate 3-5 audience growth insights focusing on:
-- Organic growth strategies for their specific niche
-- Community building tactics
-- Networking opportunities in their industry
-- Collaboration strategies with competitors/peers
-- Lead magnet ideas based on customer pain points
-`,
-      monetization: `
-Generate 3-5 monetization insights focusing on:
-- Pricing strategies for their target audience income level
-- Revenue stream diversification
-- Upselling and cross-selling opportunities
-- Subscription or recurring revenue models
-- Partnership and affiliate opportunities
-`,
-      competitive_analysis: `
-Generate 3-5 competitive analysis insights focusing on:
-- How to differentiate from identified gaps
-- Opportunities in their competitive landscape
-- Positioning strategies
-- Content gaps to exploit
-- Unique value proposition development
-`,
-      goal_planning: `
-Generate 3-5 goal planning insights focusing on:
-- SMART goals for the next 30, 60, 90 days
-- Milestone tracking strategies
-- KPI recommendations for their business type
-- Progress measurement techniques
-- Accountability systems
-`
-    };
-
-    return prompts[insightType] || prompts.content_strategy;
   }
 
   async generateBusinessInsights(request: BusinessInsightRequest): Promise<BusinessInsightResponse> {
@@ -313,17 +68,29 @@ Generate 3-5 goal planning insights focusing on:
         return this.generateFallbackInsights(request.insightType);
       }
 
-      const contextPrompt = this.createContextualPrompt(
+      // 🔄 PASSO 1: Buscar histórico de insights da blockchain
+      const userId = request.userProfile.personal?.name || 'unknown';
+      const historicalData = await this.getUserHistoricalData(userId);
+      
+      console.log(`📊 BusinessCoachingService: Retrieved ${historicalData.aiInsights.length} historical insights for ${userId}`);
+
+      // 🔄 PASSO 2: Criar prompt contextualizado com histórico
+      const contextPrompt = createContextualPrompt(
         request.userProfile,
         request.insightType,
         request.specificQuestion
       );
 
-      const insightTypePrompt = this.generateInsightTypePrompt(request.insightType);
+      const insightTypePrompt = generateInsightTypePrompt(request.insightType);
+
+      // 🔄 PASSO 3: Adicionar contexto histórico ao prompt
+      const historicalContext = this.buildHistoricalContext(historicalData, request.insightType);
 
       const fullPrompt = `${contextPrompt}
 
 ${insightTypePrompt}
+
+${historicalContext}
 
 Format your response as a detailed business coaching session. Provide:
 
@@ -349,12 +116,65 @@ An encouraging, personalized message that acknowledges their journey and motivat
 Keep the tone professional but warm, like a supportive mentor who believes in their success.
 `;
 
+      console.log('🤖 BusinessCoachingService: Generating AI insights with historical context...');
       const response = await this.aiLLM.invoke(fullPrompt);
 
-      return this.parseAgentResponse(response.content, request.insightType);
+      // 🔄 PASSO 4: Salvar novo insight na blockchain
+      const parsedResponse = this.parseAgentResponse(response.content, request.insightType);
+      
+      console.log(`🔍 BusinessCoachingService: Parsed response:`, {
+        hasInsights: !!parsedResponse.insights,
+        insightsLength: parsedResponse.insights?.length || 0,
+        insightType: request.insightType,
+        userId: userId
+      });
+      
+      console.log(`🔍 BusinessCoachingService: Full parsed response:`, JSON.stringify(parsedResponse, null, 2));
+      
+      // 🔄 SOLUÇÃO TEMPORÁRIA: Forçar salvamento no cache mesmo se parser falhar
+      if (parsedResponse.insights && parsedResponse.insights.length > 0) {
+        console.log('💾 BusinessCoachingService: Saving business insights to blockchain...');
+        console.log(`📊 BusinessCoachingService: Parsed response has ${parsedResponse.insights.length} insights`);
+        try {
+          await this.saveBusinessInsightsToBlockchain(userId, parsedResponse, request.insightType);
+          console.log('✅ BusinessCoachingService: Business insights saved to blockchain successfully');
+        } catch (error) {
+          console.error('❌ BusinessCoachingService: Failed to save business insights to blockchain:', error);
+        }
+      } else {
+        console.log('⚠️ BusinessCoachingService: Parser failed, forcing cache save...');
+        
+        // Forçar salvamento no cache com dados da IA
+        const forcedInsightData = {
+          type: 'business_observation',
+          timestamp: new Date().toISOString(),
+          data: {
+            insightType: request.insightType,
+            insights: response.content ? [{ 
+              id: `forced-${Date.now()}`,
+              title: 'AI Generated Business Observation',
+              content: response.content.substring(0, 200) + '...',
+              priority: 'high',
+              category: 'strategy'
+            }] : [],
+            summary: 'AI generated business insights',
+            nextSteps: ['Review AI recommendations'],
+            personalizedMessage: 'AI generated personalized business content',
+            model: config.openai.model
+          },
+          userId: userId
+        };
+        
+        // Adicionar ao cache
+        const existingCache = this.recentInsightsCache.get(userId) || [];
+        this.recentInsightsCache.set(userId, [...existingCache, forcedInsightData]);
+        console.log(`💾 BusinessCoachingService: Forced cache save for ${userId}. Cache now has ${this.recentInsightsCache.get(userId)?.length || 0} items`);
+      }
+
+      return parsedResponse;
 
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Failed to generate business insights:', error);
+      console.error('❌ BusinessCoachingService: Error generating business insights:', error);
       return this.generateFallbackInsights(request.insightType);
     }
   }
@@ -390,40 +210,24 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
   }
 
   private parseAgentResponse(agentOutput: string, insightType: string): BusinessInsightResponse {
-    console.log('🔄 BusinessCoachingService.parseAgentResponse: Parsing AI response');
-    console.log(`📝 Raw AI output: ${agentOutput.substring(0, 500)}...`);
-    console.log(`📝 Full AI output length: ${agentOutput.length}`);
-
     const insights: BusinessInsight[] = [];
-    
+
     try {
-            if (insightType === 'daily_missions') {
+      if (insightType === 'daily_missions') {
         // Simple parser that extracts insights from the AI response
-        console.log('🔍 Parsing daily missions from AI response...');
-        
-        // Split the response into lines and look for insights
         const lines = agentOutput.split('\n');
         let currentInsight = null;
         
-        console.log(`📝 Total lines in response: ${lines.length}`);
-        
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
-          
-          // Debug: log lines that contain "Insight"
-          if (line.includes('Insight')) {
-            console.log(`🔍 Found insight line: "${line}"`);
-          }
           
           // Look for insight patterns - multiple formats
           if ((line.includes('Insight') && line.match(/\d+:/)) || 
               (line.match(/^\d+\.\s*\*\*/)) || 
               (line.match(/^\d+\.\s+[A-Z]/))) {
-            console.log(`✅ Processing insight line: "${line}"`);
             
             // Start of a new insight
             if (currentInsight && currentInsight.title && currentInsight.content) {
-              console.log(`📝 Adding insight: "${currentInsight.title}"`);
               insights.push({
                 id: uuidv4(),
                 type: 'strategy',
@@ -449,7 +253,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             } else if (line.match(/^\d+\.\s+[A-Z]/)) {
               title = line.replace(/^\d+\.\s+/, '').trim();
             }
-            console.log(`📝 Extracted title: "${title}"`);
             currentInsight = {
               title: title,
               content: '',
@@ -463,13 +266,11 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             } else {
               currentInsight.content = line;
             }
-            console.log(`📝 Added content to insight: "${line}"`);
           }
         }
         
         // Add the last insight if it exists
         if (currentInsight && currentInsight.title && currentInsight.content) {
-          console.log(`📝 Adding final insight: "${currentInsight.title}"`);
           insights.push({
             id: uuidv4(),
             type: 'strategy',
@@ -485,49 +286,36 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             resources: []
           });
         }
-        
-        console.log(`✅ Found ${insights.length} insights using simple parser`);
       } else if (insightType === 'weekly_goals') {
         // Simple parser for weekly goals (same as daily_missions)
-        console.log('🔍 Parsing weekly goals from AI response...');
-        
         const lines = agentOutput.split('\n');
         let currentInsight = null;
         
-        console.log(`📝 Total lines in response: ${lines.length}`);
-        
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
-          
-          // Debug: log lines that contain "Goal"
-          if (line.includes('Goal')) {
-            console.log(`🔍 Found goal line: "${line}"`);
-          }
           
           // Look for goal patterns - multiple formats
           if ((line.includes('Goal') && line.match(/\d+:/)) || 
               (line.match(/^\d+\.\s*\*\*/)) || 
               (line.match(/^\d+\.\s+[A-Z]/))) {
-            console.log(`✅ Processing goal line: "${line}"`);
             
             // Start of a new goal
             if (currentInsight && currentInsight.title && currentInsight.content) {
-              console.log(`📝 Adding goal: "${currentInsight.title}"`);
-              insights.push({
-                id: uuidv4(),
-                type: 'strategy',
+                insights.push({
+                  id: uuidv4(),
+                  type: 'strategy',
                 title: currentInsight.title,
                 content: currentInsight.content,
                 priority: currentInsight.priority,
                 category: currentInsight.category,
                 action: currentInsight.title,
-                impact: 'Progress towards goals',
-                confidence: 85,
-                reasoning: 'AI-generated based on your profile',
+                  impact: 'Progress towards goals',
+                  confidence: 85,
+                  reasoning: 'AI-generated based on your profile',
                 timeline: 'This week',
-                resources: []
-              });
-            }
+                  resources: []
+                });
+              }
             
             // Extract title from multiple formats
             let title = '';
@@ -538,7 +326,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             } else if (line.match(/^\d+\.\s+[A-Z]/)) {
               title = line.replace(/^\d+\.\s+/, '').trim();
             }
-            console.log(`📝 Extracted title: "${title}"`);
             currentInsight = {
               title: title,
               content: '',
@@ -552,72 +339,57 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             } else {
               currentInsight.content = line;
             }
-            console.log(`📝 Added content to goal: "${line}"`);
           }
         }
         
         // Add the last goal if it exists
         if (currentInsight && currentInsight.title && currentInsight.content) {
-          console.log(`📝 Adding final goal: "${currentInsight.title}"`);
-          insights.push({
-            id: uuidv4(),
-            type: 'strategy',
+                             insights.push({
+                 id: uuidv4(),
+                 type: 'strategy',
             title: currentInsight.title,
             content: currentInsight.content,
             priority: currentInsight.priority,
             category: currentInsight.category,
             action: currentInsight.title,
-            impact: 'Progress towards goals',
-            confidence: 85,
-            reasoning: 'AI-generated based on your profile',
+                 impact: 'Progress towards goals',
+                 confidence: 85,
+                 reasoning: 'AI-generated based on your profile',
             timeline: 'This week',
-            resources: []
-          });
-        }
-        
-        console.log(`✅ Found ${insights.length} goals using simple parser`);
+                 resources: []
+               });
+            }
       } else if (insightType === 'ai_insights' || insightType === 'content_strategy') {
         // Simple parser for AI insights (same as daily_missions)
-        console.log('🔍 Parsing AI insights from AI response...');
-        
         const lines = agentOutput.split('\n');
         let currentInsight = null;
         
-        console.log(`📝 Total lines in response: ${lines.length}`);
-        
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
-          
-          // Debug: log lines that contain "Insight"
-          if (line.includes('Insight')) {
-            console.log(`🔍 Found insight line: "${line}"`);
-          }
           
           // Look for insight patterns - multiple formats
           if ((line.includes('Insight') && line.match(/\d+:/)) || 
               (line.match(/^\d+\.\s*\*\*/)) || 
               (line.match(/^\d+\.\s+[A-Z]/))) {
-            console.log(`✅ Processing insight line: "${line}"`);
             
             // Start of a new insight
             if (currentInsight && currentInsight.title && currentInsight.content) {
-              console.log(`📝 Adding insight: "${currentInsight.title}"`);
-              insights.push({
-                id: uuidv4(),
-                type: 'strategy',
+           insights.push({
+             id: uuidv4(),
+             type: 'strategy',
                 title: currentInsight.title,
                 content: currentInsight.content,
                 priority: currentInsight.priority,
                 category: currentInsight.category,
                 action: currentInsight.title,
                 impact: 'Strategic business improvement',
-                confidence: 85,
-                reasoning: 'AI-generated based on your profile',
+             confidence: 85,
+             reasoning: 'AI-generated based on your profile',
                 timeline: '1-2 weeks',
-                resources: []
-              });
-            }
-            
+             resources: []
+           });
+         }
+
             // Extract title from multiple formats
             let title = '';
             if (line.includes('Insight')) {
@@ -627,7 +399,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             } else if (line.match(/^\d+\.\s+[A-Z]/)) {
               title = line.replace(/^\d+\.\s+/, '').trim();
             }
-            console.log(`📝 Extracted title: "${title}"`);
             currentInsight = {
               title: title,
               content: '',
@@ -641,13 +412,11 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             } else {
               currentInsight.content = line;
             }
-            console.log(`📝 Added content to insight: "${line}"`);
           }
         }
         
         // Add the last insight if it exists
         if (currentInsight && currentInsight.title && currentInsight.content) {
-          console.log(`📝 Adding final insight: "${currentInsight.title}"`);
           insights.push({
             id: uuidv4(),
             type: 'strategy',
@@ -663,13 +432,83 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             resources: []
           });
         }
+      } else if (insightType === 'business_observations') {
+        // Simple parser for business observations (same as daily_missions)
+        const lines = agentOutput.split('\n');
+        let currentInsight = null;
         
-        console.log(`✅ Found ${insights.length} insights using simple parser`);
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Look for observation patterns - multiple formats
+          if ((line.includes('Observation') && line.match(/\d+:/)) || 
+              (line.match(/^\d+\.\s*\*\*/)) || 
+              (line.match(/^\d+\.\s+[A-Z]/))) {
+            
+            // Start of a new observation
+            if (currentInsight && currentInsight.title && currentInsight.content) {
+            insights.push({
+              id: uuidv4(),
+              type: 'strategy',
+                title: currentInsight.title,
+                content: currentInsight.content,
+                priority: currentInsight.priority,
+                category: currentInsight.category,
+                action: currentInsight.title,
+                impact: 'Strategic business improvement',
+              confidence: 85,
+              reasoning: 'AI-generated based on your profile',
+              timeline: '1-2 weeks',
+                resources: []
+              });
+            }
+            
+            // Extract title from multiple formats
+            let title = '';
+            if (line.includes('Observation')) {
+              title = line.replace(/.*?Observation \d+:\s*/, '').trim();
+            } else if (line.match(/^\d+\.\s*\*\*/)) {
+              title = line.replace(/^\d+\.\s*\*\*(.*?)\*\*/, '$1').trim();
+            } else if (line.match(/^\d+\.\s+[A-Z]/)) {
+              title = line.replace(/^\d+\.\s+/, '').trim();
+            }
+            currentInsight = {
+              title: title,
+              content: '',
+              priority: (insights.length === 0 ? 'high' : insights.length === 1 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+              category: this.mapInsightTypeToCategory(insightType)
+            };
+          } else if (currentInsight && line && !line.startsWith('Why') && !line.startsWith('Action') && !line.startsWith('What to do')) {
+            // Add content to current observation
+            if (currentInsight.content) {
+              currentInsight.content += ' ' + line;
+            } else {
+              currentInsight.content = line;
+            }
+          }
+        }
+        
+        // Add the last observation if it exists
+        if (currentInsight && currentInsight.title && currentInsight.content) {
+        insights.push({
+          id: uuidv4(),
+          type: 'strategy',
+            title: currentInsight.title,
+            content: currentInsight.content,
+            priority: currentInsight.priority,
+            category: currentInsight.category,
+            action: currentInsight.title,
+            impact: 'Strategic business improvement',
+          confidence: 85,
+            reasoning: 'AI-generated based on your profile',
+          timeline: '1-2 weeks',
+            resources: []
+          });
+        }
       }
       
       // If no insights found, create fallback
       if (insights.length === 0) {
-        console.log('⚠️ No insights found, creating fallback');
         insights.push({
           id: uuidv4(),
           type: 'strategy',
@@ -686,8 +525,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
         });
       }
 
-      console.log(`✅ Parsed ${insights.length} insights from AI response`);
-      
       return {
         insights,
         summary: `Generated ${insights.length} personalized ${insightType.replace('_', ' ')}`,
@@ -721,21 +558,12 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
   }
 
   async getChatResponse(message: string, userProfile: UserProfile, chatHistory: any[] = []): Promise<string> {
-    console.log('🔄 BusinessCoachingService.getChatResponse: Starting chat response generation');
-    console.log(`📝 BusinessCoachingService: Received message: "${message}"`);
-    console.log(`👤 BusinessCoachingService: User profile - Industry: ${userProfile.business.industry}, Motivation: ${userProfile.personal.primary_motivation}`);
-    console.log(`📚 BusinessCoachingService: Chat history length: ${chatHistory.length}`);
-    
     try {
       if (!this.aiLLM) {
-        console.log('⚠️  BusinessCoachingService: AI service not available - returning fallback response');
         return this.generateFallbackChatResponse(message, userProfile);
       }
-      console.log('✅ BusinessCoachingService: Agent is initialized and ready');
 
-      console.log('🔄 BusinessCoachingService: Creating contextual prompt...');
-      const contextPrompt = this.createContextualPrompt(userProfile, 'general_coaching');
-      console.log(`📝 BusinessCoachingService: Context prompt created (length: ${contextPrompt.length})`);
+      const contextPrompt = createContextualPrompt(userProfile, 'general_coaching');
       
       const fullPrompt = `${contextPrompt}
 
@@ -787,20 +615,8 @@ For personalized insights, respond with:
 ]
 
 Otherwise, respond as their personal business mentor. Be supportive, practical, and provide actionable advice based on their specific context and goals.`;
-
-      console.log(`📝 BusinessCoachingService: Full prompt created (length: ${fullPrompt.length})`);
-      console.log(`🔍 BusinessCoachingService: Full prompt preview: ${fullPrompt.substring(0, 300)}...`);
-
-      console.log('🚀 BusinessCoachingService: Sending message to agent...');
-      console.log(`📊 BusinessCoachingService: Agent processMessage called with chatHistory length: ${chatHistory.length}`);
       
       const response = await this.aiLLM.invoke(fullPrompt);
-      
-      console.log('✅ BusinessCoachingService: Agent response received');
-      console.log(`📦 BusinessCoachingService: Response type: ${typeof response}`);
-      console.log(`📦 BusinessCoachingService: Response keys: ${Object.keys(response)}`);
-      console.log(`📝 BusinessCoachingService: Response output length: ${response.content?.length || 0}`);
-      console.log(`📝 BusinessCoachingService: Response output preview: ${response.content?.substring(0, 200) || 'No output'}...`);
       
       return response.content;
 
@@ -815,10 +631,290 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
   }
 
   private generateFallbackChatResponse(message: string, userProfile: UserProfile): string {
-    console.log('🔄 BusinessCoachingService: Generating fallback chat response');
-    
     const fallbackResponse = `I understand you're working on your ${userProfile.business.industry} business. While our AI features are being configured, I'd recommend focusing on connecting with your target audience (${userProfile.business.target_audience?.age_range || 'your ideal customers'}) and addressing their main pain point: ${userProfile.business.target_audience?.pain_points || 'their key challenges'}. This aligns with your goal of ${userProfile.personal.success_definition || 'building a successful business'}. We'll have enhanced AI coaching features available soon!`;
-    console.log(`✅ BusinessCoachingService: Fallback response generated (length: ${fallbackResponse.length})`);
     return fallbackResponse;
+  }
+
+  // Cache local para insights recentes (temporário até Mirror Node sincronizar)
+  private recentInsightsCache = new Map<string, any[]>();
+
+  // 🔄 NOVO MÉTODO: Buscar dados históricos da blockchain
+  private async getUserHistoricalData(userId: string): Promise<{
+    userProfile: any;
+    businessData: any;
+    aiInsights: any[];
+    missionCompletions: any[];
+  }> {
+    try {
+      // Primeiro, buscar do cache local (insights recentes)
+      const cachedInsights = this.recentInsightsCache.get(userId) || [];
+      console.log(`📊 BusinessCoachingService: Found ${cachedInsights.length} cached insights for ${userId}`);
+      
+      // Depois, buscar da blockchain (insights antigos)
+      const blockchainData = await this.hederaTopicService.getUserDataFromBlockchain(userId);
+      const blockchainInsights = blockchainData?.aiInsights || [];
+      console.log(`📊 BusinessCoachingService: Found ${blockchainInsights.length} blockchain insights for ${userId}`);
+      
+      // Combinar cache local + blockchain
+      const allInsights = [...cachedInsights, ...blockchainInsights];
+      console.log(`📊 BusinessCoachingService: Total insights for ${userId}: ${allInsights.length}`);
+      
+      return {
+        userProfile: blockchainData?.userProfile || null,
+        businessData: blockchainData?.businessData || null,
+        aiInsights: allInsights,
+        missionCompletions: blockchainData?.missionCompletions || []
+      };
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error getting historical data:', error);
+      return {
+        userProfile: null,
+        businessData: null,
+        aiInsights: [],
+        missionCompletions: []
+      };
+    }
+  }
+
+  // 🔄 NOVO MÉTODO: Construir contexto histórico para IA
+  private buildHistoricalContext(historicalData: any, currentInsightType: string): string {
+    const { aiInsights, missionCompletions } = historicalData;
+    
+    let context = '\n--- HISTORICAL CONTEXT ---\n';
+    
+    // Adicionar insights anteriores relevantes
+    if (aiInsights.length > 0) {
+      const relevantInsights = aiInsights
+        .filter((insight: any) => insight.category === currentInsightType || insight.type === currentInsightType)
+        .slice(-3); // Últimos 3 insights relevantes
+      
+      if (relevantInsights.length > 0) {
+        context += '\nPrevious AI Insights:\n';
+        relevantInsights.forEach((insight: any, index: number) => {
+          context += `${index + 1}. ${insight.title}: ${insight.content.substring(0, 100)}...\n`;
+        });
+      }
+    }
+    
+    // Adicionar missões completadas
+    if (missionCompletions.length > 0) {
+      const recentMissions = missionCompletions.slice(-5); // Últimas 5 missões
+      context += '\nRecent Completed Missions:\n';
+      recentMissions.forEach((mission: any, index: number) => {
+        context += `${index + 1}. ${mission.title || mission.missionId}\n`;
+      });
+    }
+    
+    context += '\n--- END HISTORICAL CONTEXT ---\n';
+    return context;
+  }
+
+  // 🔄 NOVO MÉTODO: Salvar insights de IA na blockchain
+  private async saveBusinessInsightsToBlockchain(userId: string, response: BusinessInsightResponse, insightType: string): Promise<void> {
+    try {
+      console.log(`💾 BusinessCoachingService: Preparing to save business insights for ${userId}...`);
+      console.log(`📊 BusinessCoachingService: Response has ${response.insights?.length || 0} insights`);
+      
+      const insightData = {
+        type: insightType, // Usar o insightType correto (daily_missions, weekly_goals, business_observations)
+        timestamp: new Date().toISOString(),
+        data: {
+          insightType,
+          insights: response.insights,
+          summary: response.summary,
+          nextSteps: response.nextSteps,
+          personalizedMessage: response.personalized_message,
+          model: config.openai.model
+        },
+        userId: userId
+      };
+
+      console.log(`📝 BusinessCoachingService: Insight data prepared:`, {
+        type: insightData.type,
+        insightType: insightData.data.insightType,
+        insightsCount: insightData.data.insights?.length || 0,
+        userId: insightData.userId
+      });
+
+      const txId = await this.hederaTopicService.saveAIInsight(userId, insightData.data);
+      console.log(`✅ BusinessCoachingService: Business insights saved to blockchain for user ${userId}. TX ID: ${txId}`);
+      
+      // Adicionar ao cache local para acesso imediato
+      const existingCache = this.recentInsightsCache.get(userId) || [];
+      this.recentInsightsCache.set(userId, [...existingCache, insightData]);
+      console.log(`💾 BusinessCoachingService: Added to local cache for ${userId}. Cache now has ${this.recentInsightsCache.get(userId)?.length || 0} items`);
+      
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error saving business insights to blockchain:', error);
+      console.error('❌ BusinessCoachingService: Error details:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  // 🔄 MÉTODO ATUALIZADO: Salvar perfil do usuário na blockchain
+  async saveUserProfileToBlockchain(userProfile: UserProfile): Promise<string | null> {
+    try {
+      const userId = userProfile.personal?.name || 'unknown';
+      console.log(`🔐 BusinessCoachingService: Saving user profile to blockchain for ${userId}...`);
+      
+      const txId = await this.hederaTopicService.saveUserProfile(userId, userProfile);
+      
+      console.log(`✅ BusinessCoachingService: User profile saved to blockchain. TX ID: ${txId}`);
+      return txId;
+      
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error saving user profile to blockchain:', error);
+      return null;
+    }
+  }
+
+  // 🔄 MÉTODO ATUALIZADO: Salvar dados do negócio na blockchain
+  async saveBusinessDataToBlockchain(businessData: any, userId: string): Promise<string | null> {
+    try {
+      console.log(`🔐 BusinessCoachingService: Saving business data to blockchain for ${userId}...`);
+      
+      const txId = await this.hederaTopicService.saveBusinessData(userId, businessData);
+      
+      console.log(`✅ BusinessCoachingService: Business data saved to blockchain. TX ID: ${txId}`);
+      return txId;
+      
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error saving business data to blockchain:', error);
+      return null;
+    }
+  }
+
+  // 🔄 MÉTODO ATUALIZADO: Salvar conclusão de missão na blockchain
+  async saveMissionCompletionToBlockchain(missionData: any): Promise<string | null> {
+    try {
+      const { userId } = missionData;
+      console.log(`🔐 BusinessCoachingService: Saving mission completion to blockchain for ${userId}...`);
+      
+      const txId = await this.hederaTopicService.saveMissionCompletion(userId, missionData);
+      
+      console.log(`✅ BusinessCoachingService: Mission completion saved to blockchain. TX ID: ${txId}`);
+      return txId;
+      
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error saving mission completion to blockchain:', error);
+      return null;
+    }
+  }
+
+  // 🔄 MÉTODO ATUALIZADO: Buscar dados do usuário da blockchain
+  async getUserDataFromBlockchain(userId: string): Promise<any> {
+    try {
+      console.log(`🔐 BusinessCoachingService: Reading user data for ${userId}...`);
+      
+      // Buscar dados do cache local (insights recentes)
+      const cachedInsights = this.recentInsightsCache.get(userId) || [];
+      console.log(`📊 BusinessCoachingService: Found ${cachedInsights.length} cached insights for ${userId}`);
+      
+      // Buscar dados da blockchain (insights antigos)
+      const blockchainData = await this.hederaTopicService.getUserDataFromBlockchain(userId);
+      const blockchainInsights = blockchainData?.aiInsights || [];
+      console.log(`📊 BusinessCoachingService: Found ${blockchainInsights.length} blockchain insights for ${userId}`);
+      
+      // Combinar cache + blockchain
+      const allInsights = [...cachedInsights, ...blockchainInsights];
+      console.log(`📊 BusinessCoachingService: Total insights for ${userId}: ${allInsights.length}`);
+      console.log(`📊 BusinessCoachingService: Cached insights:`, cachedInsights.length);
+      console.log(`📊 BusinessCoachingService: Blockchain insights:`, blockchainInsights.length);
+      
+      // Normalizar formato para ser consistente
+      const normalizedInsights = allInsights.map(insight => {
+        // Se o insight tem estrutura aninhada (cache), extrair os dados
+        if (insight.type && insight.data) {
+          return {
+            insightType: insight.data.insightType,
+            insights: insight.data.insights,
+            summary: insight.data.summary,
+            nextSteps: insight.data.nextSteps,
+            personalizedMessage: insight.data.personalizedMessage,
+            timestamp: insight.timestamp,
+            model: insight.data.model
+          };
+        }
+        // Se o insight já está no formato correto (blockchain)
+        // Adicionar insightType se não existir (para insights antigos)
+        if (!insight.insightType) {
+          return {
+            ...insight,
+            insightType: 'daily_missions' // Padrão para insights antigos
+          };
+        }
+        return insight;
+      });
+      
+      const combinedData = {
+        userProfile: blockchainData?.userProfile || null,
+        businessData: blockchainData?.businessData || null,
+        aiInsights: normalizedInsights,
+        missionCompletions: blockchainData?.missionCompletions || []
+      };
+      
+      if (combinedData.aiInsights.length > 0 || combinedData.userProfile || combinedData.businessData) {
+        console.log(`✅ BusinessCoachingService: User data retrieved successfully`);
+        return combinedData;
+      } else {
+        console.log(`❌ BusinessCoachingService: No data found for user ${userId}`);
+      return null;
+    }
+
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error reading user data:', error);
+      return null;
+    }
+  }
+
+  // 🔄 MÉTODO PÚBLICO: Salvar insights de negócio na blockchain
+  async saveBusinessInsightToBlockchain(userId: string, insightData: any): Promise<string | null> {
+    try {
+      console.log(`💾 BusinessCoachingService: Saving business insight to blockchain for ${userId}...`);
+      
+      const txId = await this.hederaTopicService.saveAIInsight(userId, insightData);
+      
+      console.log(`✅ BusinessCoachingService: Business insight saved to blockchain. TX ID: ${txId}`);
+      return txId;
+      
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error saving business insight to blockchain:', error);
+      return null;
+    }
+  }
+
+  // 🔄 MÉTODO PÚBLICO: Obter dados do cache
+  getCacheData(userId: string): any {
+    const cachedInsights = this.recentInsightsCache.get(userId) || [];
+    return {
+      userId,
+      cachedInsightsCount: cachedInsights.length,
+      cachedInsights: cachedInsights
+    };
+  }
+
+  // 🔄 MÉTODO ATUALIZADO: Buscar informações do tópico
+  async getTopicInfo(userId: string): Promise<any> {
+    try {
+      console.log(`🔐 BusinessCoachingService: Getting topic info for ${userId}...`);
+      
+      const topicData = await this.hederaTopicService.getUserTopic(userId);
+      
+      if (topicData) {
+        const topicInfo = await this.hederaTopicService.getTopicInfoFromMirrorNode(topicData.topicId);
+        return {
+          userId,
+          topicId: topicData.topicId,
+          topicMemo: topicData.memo,
+          topicInfo
+        };
+      } else {
+        console.log(`❌ BusinessCoachingService: No topic found for user ${userId}`);
+        return null;
+      }
+      
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error getting topic info:', error);
+      return null;
+    }
   }
 } 

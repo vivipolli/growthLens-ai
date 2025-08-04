@@ -22,8 +22,8 @@ export class BusinessController {
         request.insightType = 'daily_missions';
       } else if (req.path.includes('weekly-goals')) {
         request.insightType = 'weekly_goals';
-      } else if (req.path.includes('ai-insights')) {
-        request.insightType = 'ai_insights';
+      } else if (req.path.includes('business-observations')) {
+        request.insightType = 'business_observations';
       }
       
       console.log(`📝 [${requestId}] Request data:`, {
@@ -226,7 +226,7 @@ export class BusinessController {
       }
 
       console.log(`🔄 [${requestId}] Saving user profile to blockchain for user: ${userId}`);
-      const txId = await this.businessCoachingService.saveUserProfileToBlockchain(userId, profileData);
+      const txId = await this.businessCoachingService.saveUserProfileToBlockchain(profileData);
       
       if (txId) {
         console.log(`✅ [${requestId}] User profile saved to blockchain. TX ID: ${txId}`);
@@ -268,7 +268,7 @@ export class BusinessController {
       }
 
       console.log(`🔄 [${requestId}] Saving business data to blockchain for user: ${userId}`);
-      const txId = await this.businessCoachingService.saveBusinessDataToBlockchain(userId, businessData);
+      const txId = await this.businessCoachingService.saveBusinessDataToBlockchain(businessData, userId);
       
       if (txId) {
         console.log(`✅ [${requestId}] Business data saved to blockchain. TX ID: ${txId}`);
@@ -310,7 +310,7 @@ export class BusinessController {
       }
 
       console.log(`🔄 [${requestId}] Saving mission completion to blockchain for user: ${userId}`);
-      const txId = await this.businessCoachingService.saveMissionCompletionToBlockchain(userId, missionData);
+      const txId = await this.businessCoachingService.saveMissionCompletionToBlockchain(missionData);
       
       if (txId) {
         console.log(`✅ [${requestId}] Mission completion saved to blockchain. TX ID: ${txId}`);

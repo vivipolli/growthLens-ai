@@ -18,7 +18,7 @@ export interface UserTopicData {
 }
 
 export interface TopicMessage {
-  type: 'user_profile' | 'business_data' | 'ai_insight' | 'mission_completion';
+  type: 'user_profile' | 'business_data' | 'ai_insight' | 'mission_completion' | 'daily_missions' | 'weekly_goals' | 'business_observations';
   timestamp: string;
   data: any;
   userId: string;
@@ -200,6 +200,9 @@ export class HederaTopicService {
       // Fetch messages from Mirror Node API
       const messages = await this.getTopicMessagesFromMirrorNode(topicData.topicId);
       
+      // Reconstruct fragmented messages
+      const reconstructedMessages = this.reconstructFragmentedMessages(messages);
+      
       // Parse and organize messages by type
       const userData = {
         userProfile: null as any,
@@ -208,7 +211,7 @@ export class HederaTopicService {
         missionCompletions: [] as any[]
       };
 
-      for (const message of messages) {
+      for (const message of reconstructedMessages) {
         try {
           // Handle different message formats
           let messageContent = message.message;
@@ -219,7 +222,7 @@ export class HederaTopicService {
             if (messageContent.match(/^[A-Za-z0-9+/]*={0,2}$/)) {
               try {
                 messageContent = Buffer.from(messageContent, 'base64').toString('utf-8');
-                console.log('🔧 Decoded base64 message');
+                console.log('🔧 Decoded base64 message successfully');
               } catch (decodeError) {
                 console.log('⚠️ Failed to decode base64, using original message');
               }
@@ -230,7 +233,9 @@ export class HederaTopicService {
           let parsedMessage;
           try {
             parsedMessage = JSON.parse(messageContent);
+            console.log('✅ Successfully parsed JSON message');
           } catch (parseError) {
+            console.log('⚠️ JSON parsing failed, trying to extract JSON from content');
             // If JSON parsing fails, try to extract JSON from the content
             const jsonMatch = messageContent.match(/\{.*\}/s);
             if (jsonMatch) {
@@ -242,8 +247,31 @@ export class HederaTopicService {
                 continue; // Skip this message
               }
             } else {
-              console.log('⚠️ No valid JSON found in message');
-              continue; // Skip this message
+              // Try to find partial JSON structures
+              const typeMatch = messageContent.match(/"type"\s*:\s*"([^"]+)"/);
+              const insightsMatch = messageContent.match(/"insights"\s*:\s*\[/);
+              const summaryMatch = messageContent.match(/"summary"\s*:\s*"([^"]+)"/);
+              const userIdMatch = messageContent.match(/"userId"\s*:\s*"([^"]+)"/);
+              
+              if (typeMatch && insightsMatch) {
+                console.log('🔧 Found partial AI insight message');
+                
+                // Extract insights from the fragmented message
+                const insights = this.extractInsightsFromFragmentedMessage(messageContent);
+                
+                parsedMessage = {
+                  type: typeMatch[1],
+                  data: {
+                    insights: insights,
+                    summary: summaryMatch ? summaryMatch[1] : 'Generated insights',
+                    timestamp: new Date().toISOString(),
+                    userId: userIdMatch ? userIdMatch[1] : 'unknown'
+                  }
+                };
+              } else {
+                console.log('⚠️ No valid JSON structure found in message');
+                continue; // Skip this message
+              }
             }
           }
           
@@ -255,6 +283,9 @@ export class HederaTopicService {
               userData.businessData = parsedMessage.data;
               break;
             case 'ai_insight':
+            case 'daily_missions':
+            case 'weekly_goals':
+            case 'business_observations':
               userData.aiInsights.push({
                 ...parsedMessage.data,
                 timestamp: parsedMessage.timestamp
@@ -273,13 +304,87 @@ export class HederaTopicService {
         }
       }
 
-      console.log(`✅ HederaTopicService: Retrieved ${messages.length} messages from blockchain`);
+      console.log(`✅ HederaTopicService: Retrieved ${reconstructedMessages.length} reconstructed messages from blockchain`);
       return userData;
 
     } catch (error) {
       console.error('❌ HederaTopicService: Failed to get user data from blockchain:', error);
       return null;
     }
+  }
+
+  // 🔄 NOVO MÉTODO: Reconstruir mensagens fragmentadas
+  private reconstructFragmentedMessages(messages: any[]): any[] {
+    const messageGroups = new Map<string, any[]>();
+    
+    // Group messages by their initial transaction ID
+    for (const message of messages) {
+      if (message.chunk_info && message.chunk_info.initial_transaction_id) {
+        const txId = message.chunk_info.initial_transaction_id.account_id + '@' + message.chunk_info.initial_transaction_id.transaction_valid_start;
+        
+        if (!messageGroups.has(txId)) {
+          messageGroups.set(txId, []);
+        }
+        messageGroups.get(txId)!.push(message);
+      }
+    }
+    
+    const reconstructedMessages: any[] = [];
+    
+    // Reconstruct each group
+    for (const [txId, group] of messageGroups) {
+      if (group.length > 1) {
+        // Sort by chunk number
+        group.sort((a, b) => a.chunk_info.number - b.chunk_info.number);
+        
+        // Combine all chunks
+        let fullMessage = '';
+        for (const chunk of group) {
+          fullMessage += chunk.message;
+        }
+        
+        // Create reconstructed message
+        const reconstructedMessage = {
+          ...group[0],
+          message: fullMessage,
+          reconstructed: true
+        };
+        
+        reconstructedMessages.push(reconstructedMessage);
+        console.log(`🔧 Reconstructed message from ${group.length} chunks for transaction ${txId}`);
+      } else {
+        // Single message, no reconstruction needed
+        reconstructedMessages.push(group[0]);
+      }
+    }
+    
+    return reconstructedMessages;
+  }
+
+  // 🔄 NOVO MÉTODO: Extrair insights de mensagens fragmentadas
+  private extractInsightsFromFragmentedMessage(messageContent: string): any[] {
+    const insights: any[] = [];
+    
+    // Look for insight objects in the fragmented message
+    const insightMatches = messageContent.match(/\{[^}]*"id"\s*:\s*"[^"]+"[^}]*\}/g);
+    
+    if (insightMatches) {
+      for (const match of insightMatches) {
+        try {
+          // Try to parse each potential insight
+          const insight = JSON.parse(match);
+          if (insight.id && insight.title) {
+            insights.push(insight);
+          }
+        } catch (error) {
+          // Skip invalid insights
+          continue;
+        }
+      }
+    }
+    
+    console.log(`🔧 Extracted ${insights.length} insights from fragmented message`);
+    return insights;
   }
 
   async getTopicMessagesFromMirrorNode(topicId: string, limit: number = 100): Promise<any[]> {
@@ -367,8 +472,11 @@ export class HederaTopicService {
   async saveAIInsight(userId: string, insightData: any): Promise<string> {
     const topicData = await this.getOrCreateUserTopic(userId, insightData);
     
+    // Determinar o tipo correto baseado no insightType
+    const messageType = insightData.insightType || 'ai_insight';
+    
     return await this.submitMessage(topicData.topicId, {
-      type: 'ai_insight',
+      type: messageType,
       timestamp: new Date().toISOString(),
       data: insightData,
       userId

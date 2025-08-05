@@ -25,9 +25,6 @@ export class BusinessCoachingService {
   }
 
   async initialize() {
-    console.log('🔄 BusinessCoachingService: Starting initialization...');
-    
-    // Initialize Hedera Topic Service
     await this.hederaTopicService.initialize();
     
     this.agentSigner = new ServerSigner(
@@ -35,71 +32,52 @@ export class BusinessCoachingService {
       config.hedera.privateKey,
       config.hedera.network as any
     );
-    console.log(`✅ BusinessCoachingService: ServerSigner created for network: ${config.hedera.network}`);
 
-    // Check if API key is available
     if (!config.openai.apiKey) {
-      console.log('⚠️  BusinessCoachingService: No API key available - AI features will be disabled');
-      console.log('💡 Set OPENROUTER_API_KEY or OPENAI_API_KEY to enable AI features');
       return;
     }
 
-    // Initialize LangChain AI service
     try {
-      console.log('🤖 BusinessCoachingService: Initializing LangChain AI service...');
       this.aiLLM = createInstance({
         modelName: config.openai.model,
         baseURL: config.openai.baseURL,
         apiKey: config.openai.apiKey
       });
-      
-      console.log('✅ BusinessCoachingService: LangChain AI service initialized successfully');
-      console.log('✅ BusinessCoachingService: aiLLM instance:', typeof this.aiLLM);
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Failed to initialize AI service:', error);
-      console.log('⚠️  AI features will be disabled, but service will continue running');
+      console.error('Failed to initialize AI service:', error);
     }
   }
 
   async generateBusinessInsights(request: BusinessInsightRequest): Promise<BusinessInsightResponse> {
-    console.log('🔄 BusinessCoachingService.generateBusinessInsights: Starting...');
-    
     try {
-      // Use persistent user ID from Clerk or generate from user profile
       const userId = this.getPersistentUserId(request.userProfile);
-      console.log(`🆔 Using persistent user ID: ${userId}`);
-      
       const userProfile = request.userProfile;
       const insightType = request.insightType;
-      
-      console.log(`📝 Processing insights for user: ${userId}`);
-      console.log(`🎯 Insight type: ${insightType}`);
-      console.log(`👤 User profile present: ${!!userProfile}`);
       
       if (!userProfile || !insightType) {
         throw new Error('userProfile and insightType are required');
       }
 
       if (!this.aiLLM) {
-        console.log('⚠️  BusinessCoachingService: AI service not available - returning fallback insights');
         return this.generateFallbackInsights(insightType);
       }
 
-      // 🔄 PASSO 1: Buscar histórico de insights da blockchain
       const historicalData = await this.getUserHistoricalData(userId);
       
-      console.log(`📊 BusinessCoachingService: Retrieved ${historicalData.aiInsights.length} historical insights for ${userId}`);
-
-      // 🔄 PASSO 2: Criar prompt contextualizado com histórico
+      // Get progress data for business observations
+      let progressData = null;
+      if (request.insightType === 'business_observations') {
+        progressData = await this.getUserProgressData(request.userProfile, historicalData);
+      }
+      
       const contextPrompt = createContextualPrompt(
         request.userProfile,
         request.insightType,
-        request.specificQuestion
+        request.specificQuestion,
+        progressData
       );
 
       const insightTypePrompt = generateInsightTypePrompt(request.insightType);
-
-      // 🔄 PASSO 3: Adicionar contexto histórico ao prompt
       const historicalContext = this.buildHistoricalContext(historicalData, request.insightType);
 
       const fullPrompt = `${contextPrompt}
@@ -132,35 +110,16 @@ An encouraging, personalized message that acknowledges their journey and motivat
 Keep the tone professional but warm, like a supportive mentor who believes in their success.
 `;
 
-      console.log('🤖 BusinessCoachingService: Generating AI insights with historical context...');
       const response = await this.aiLLM.invoke(fullPrompt);
-
-      // 🔄 PASSO 4: Salvar novo insight na blockchain
       const parsedResponse = this.parseAgentResponse(response.content, request.insightType);
       
-      console.log(`🔍 BusinessCoachingService: Parsed response:`, {
-        hasInsights: !!parsedResponse.insights,
-        insightsLength: parsedResponse.insights?.length || 0,
-        insightType: request.insightType,
-        userId: userId
-      });
-      
-      console.log(`🔍 BusinessCoachingService: Full parsed response:`, JSON.stringify(parsedResponse, null, 2));
-      
-      // 🔄 SOLUÇÃO TEMPORÁRIA: Forçar salvamento no cache mesmo se parser falhar
       if (parsedResponse.insights && parsedResponse.insights.length > 0) {
-        console.log('💾 BusinessCoachingService: Saving business insights to blockchain...');
-        console.log(`📊 BusinessCoachingService: Parsed response has ${parsedResponse.insights.length} insights`);
         try {
           await this.saveBusinessInsightsToBlockchain(userId, parsedResponse, request.insightType);
-          console.log('✅ BusinessCoachingService: Business insights saved to blockchain successfully');
         } catch (error) {
-          console.error('❌ BusinessCoachingService: Failed to save business insights to blockchain:', error);
+          console.error('Failed to save business insights to blockchain:', error);
         }
       } else {
-        console.log('⚠️ BusinessCoachingService: Parser failed, forcing cache save...');
-        
-        // Forçar salvamento no cache com dados da IA
         const forcedInsightData = {
           type: 'business_observation',
           timestamp: new Date().toISOString(),
@@ -181,16 +140,14 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
           userId: userId
         };
         
-        // Adicionar ao cache
         const existingCache = this.recentInsightsCache.get(userId) || [];
         this.recentInsightsCache.set(userId, [...existingCache, forcedInsightData]);
-        console.log(`💾 BusinessCoachingService: Forced cache save for ${userId}. Cache now has ${this.recentInsightsCache.get(userId)?.length || 0} items`);
       }
 
       return parsedResponse;
 
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error generating business insights:', error);
+      console.error('Error generating business insights:', error);
       return this.generateFallbackInsights(request.insightType);
     }
   }
@@ -304,19 +261,16 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
         }
 
       } else if (insightType === 'ai_insights' || insightType === 'content_strategy') {
-        // Simple parser for AI insights (same as daily_missions)
         const lines = agentOutput.split('\n');
         let currentInsight = null;
         
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
           
-          // Look for insight patterns - multiple formats
           if ((line.includes('Insight') && line.match(/\d+:/)) || 
               (line.match(/^\d+\.\s*\*\*/)) || 
               (line.match(/^\d+\.\s+[A-Z]/))) {
             
-            // Start of a new insight
             if (currentInsight && currentInsight.title && currentInsight.content) {
            insights.push({
              id: uuidv4(),
@@ -334,7 +288,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
            });
          }
 
-            // Extract title from multiple formats
             let title = '';
             if (line.includes('Insight')) {
               title = line.replace(/.*?Insight \d+:\s*/, '').trim();
@@ -350,7 +303,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
               category: this.mapInsightTypeToCategory(insightType)
             };
           } else if (currentInsight && line && !line.startsWith('Why') && !line.startsWith('Action') && !line.startsWith('What to do')) {
-            // Add content to current insight
             if (currentInsight.content) {
               currentInsight.content += ' ' + line;
             } else {
@@ -359,7 +311,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
           }
         }
         
-        // Add the last insight if it exists
         if (currentInsight && currentInsight.title && currentInsight.content) {
           insights.push({
             id: uuidv4(),
@@ -377,19 +328,16 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
           });
         }
       } else if (insightType === 'business_observations') {
-        // Simple parser for business observations (same as daily_missions)
         const lines = agentOutput.split('\n');
         let currentInsight = null;
         
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
           
-          // Look for observation patterns - multiple formats
           if ((line.includes('Observation') && line.match(/\d+:/)) || 
               (line.match(/^\d+\.\s*\*\*/)) || 
               (line.match(/^\d+\.\s+[A-Z]/))) {
             
-            // Start of a new observation
             if (currentInsight && currentInsight.title && currentInsight.content) {
             insights.push({
               id: uuidv4(),
@@ -407,7 +355,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
               });
             }
             
-            // Extract title from multiple formats
             let title = '';
             if (line.includes('Observation')) {
               title = line.replace(/.*?Observation \d+:\s*/, '').trim();
@@ -423,7 +370,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
               category: this.mapInsightTypeToCategory(insightType)
             };
           } else if (currentInsight && line && !line.startsWith('Why') && !line.startsWith('Action') && !line.startsWith('What to do')) {
-            // Add content to current observation
             if (currentInsight.content) {
               currentInsight.content += ' ' + line;
             } else {
@@ -432,7 +378,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
           }
         }
         
-        // Add the last observation if it exists
         if (currentInsight && currentInsight.title && currentInsight.content) {
         insights.push({
           id: uuidv4(),
@@ -451,7 +396,6 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
         }
       }
       
-      // If no insights found, create fallback
       if (insights.length === 0) {
         insights.push({
           id: uuidv4(),
@@ -551,11 +495,7 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
       return response.content;
 
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Chat response error:', error);
-      console.error('❌ BusinessCoachingService: Error type:', typeof error);
-      console.error('❌ BusinessCoachingService: Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('❌ BusinessCoachingService: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      
+      console.error('Chat response error:', error);
       return this.generateFallbackChatResponse(message, userProfile);
     }
   }
@@ -565,10 +505,9 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     return fallbackResponse;
   }
 
-  // Cache local para insights recentes (temporário até Mirror Node sincronizar)
+  // Local cache for recent insights (temporary until Mirror Node syncs)
   private recentInsightsCache = new Map<string, any[]>();
 
-  // 🔄 NOVO MÉTODO: Buscar dados históricos da blockchain
   private async getUserHistoricalData(userId: string): Promise<{
     userProfile: any;
     businessData: any;
@@ -576,18 +515,10 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     missionCompletions: any[];
   }> {
     try {
-      // Primeiro, buscar do cache local (insights recentes)
       const cachedInsights = this.recentInsightsCache.get(userId) || [];
-      console.log(`📊 BusinessCoachingService: Found ${cachedInsights.length} cached insights for ${userId}`);
-      
-      // Depois, buscar da blockchain (insights antigos)
       const blockchainData = await this.hederaTopicService.getUserDataFromBlockchain(userId);
       const blockchainInsights = blockchainData?.aiInsights || [];
-      console.log(`📊 BusinessCoachingService: Found ${blockchainInsights.length} blockchain insights for ${userId}`);
-      
-      // Combinar cache local + blockchain
       const allInsights = [...cachedInsights, ...blockchainInsights];
-      console.log(`📊 BusinessCoachingService: Total insights for ${userId}: ${allInsights.length}`);
       
       return {
         userProfile: blockchainData?.userProfile || null,
@@ -596,7 +527,7 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
         missionCompletions: blockchainData?.missionCompletions || []
       };
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error getting historical data:', error);
+      console.error('Error getting historical data:', error);
       return {
         userProfile: null,
         businessData: null,
@@ -606,32 +537,102 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     }
   }
 
-  // 🔄 NOVO MÉTODO: Construir contexto histórico para IA
+  private async getUserProgressData(userProfile: any, historicalData?: any): Promise<any> {
+    try {
+      if (!historicalData) {
+        return {
+          completedMissions: 0,
+          totalMissions: 0,
+          completionRate: 0,
+          activeMissionCategories: 'Starting journey',
+          recentActivityAreas: 'No activity yet',
+          progressTrends: 'New user beginning their growth journey'
+        };
+      }
+
+      const completedMissions = historicalData.missionCompletions || [];
+      const totalMissions = completedMissions.length + 5; // Assume some pending missions
+      const completionRate = totalMissions > 0 ? Math.round((completedMissions.length / totalMissions) * 100) : 0;
+
+      // Extract mission categories from completed missions
+      const categories = completedMissions
+        .map((mission: any) => mission.category || mission.type || 'general')
+        .reduce((acc: any, category: string) => {
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        }, {});
+
+      const activeMissionCategories = Object.keys(categories).length > 0 
+        ? Object.keys(categories).join(', ')
+        : 'content, strategy';
+
+      // Analyze recent activity
+      const recentActivityAreas = completedMissions.length > 0
+        ? `Recently focused on: ${Object.entries(categories)
+            .sort(([,a]: any, [,b]: any) => b - a)
+            .slice(0, 3)
+            .map(([category]: any) => category)
+            .join(', ')}`
+        : 'Getting started with foundational activities';
+
+      // Progress trends analysis
+      let progressTrends = 'Starting journey';
+      if (completedMissions.length >= 10) {
+        progressTrends = 'Strong momentum with consistent execution';
+      } else if (completedMissions.length >= 5) {
+        progressTrends = 'Building good habits and making steady progress';
+      } else if (completedMissions.length >= 2) {
+        progressTrends = 'Initial progress with room for acceleration';
+      }
+
+      return {
+        completedMissions: completedMissions.length,
+        totalMissions,
+        completionRate,
+        activeMissionCategories,
+        recentActivityAreas,
+        progressTrends
+      };
+    } catch (error) {
+      console.error('Error getting user progress data:', error);
+      return {
+        completedMissions: 0,
+        totalMissions: 0,
+        completionRate: 0,
+        activeMissionCategories: 'Data unavailable',
+        recentActivityAreas: 'Data unavailable',
+        progressTrends: 'Unable to analyze progress'
+      };
+    }
+  }
+
   private buildHistoricalContext(historicalData: any, currentInsightType: string): string {
     const { aiInsights, missionCompletions } = historicalData;
     
     let context = '\n--- HISTORICAL CONTEXT ---\n';
     
-    // Adicionar insights anteriores relevantes
     if (aiInsights.length > 0) {
       const relevantInsights = aiInsights
         .filter((insight: any) => insight.category === currentInsightType || insight.type === currentInsightType)
-        .slice(-3); // Últimos 3 insights relevantes
+        .slice(-3);
       
       if (relevantInsights.length > 0) {
         context += '\nPrevious AI Insights:\n';
         relevantInsights.forEach((insight: any, index: number) => {
-          context += `${index + 1}. ${insight.title}: ${insight.content.substring(0, 100)}...\n`;
+          const title = insight.title || 'Untitled';
+          const content = insight.content || '';
+          const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+          context += `${index + 1}. ${title}: ${preview}\n`;
         });
       }
     }
     
-    // Adicionar missões completadas
     if (missionCompletions.length > 0) {
-      const recentMissions = missionCompletions.slice(-5); // Últimas 5 missões
+      const recentMissions = missionCompletions.slice(-5);
       context += '\nRecent Completed Missions:\n';
       recentMissions.forEach((mission: any, index: number) => {
-        context += `${index + 1}. ${mission.title || mission.missionId}\n`;
+        const missionTitle = mission.title || mission.missionId || 'Unknown Mission';
+        context += `${index + 1}. ${missionTitle}\n`;
       });
     }
     
@@ -639,14 +640,10 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     return context;
   }
 
-  // 🔄 NOVO MÉTODO: Salvar insights de IA na blockchain
   private async saveBusinessInsightsToBlockchain(userId: string, response: BusinessInsightResponse, insightType: string): Promise<void> {
     try {
-      console.log(`💾 BusinessCoachingService: Preparing to save business insights for ${userId}...`);
-      console.log(`📊 BusinessCoachingService: Response has ${response.insights?.length || 0} insights`);
-      
       const insightData = {
-        type: insightType, // Usar o insightType correto (daily_missions, weekly_goals, business_observations)
+        type: insightType,
         timestamp: new Date().toISOString(),
         data: {
           insightType,
@@ -659,130 +656,71 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
         userId: userId
       };
 
-      console.log(`📝 BusinessCoachingService: Insight data prepared:`, {
-        type: insightData.type,
-        insightType: insightData.data.insightType,
-        insightsCount: insightData.data.insights?.length || 0,
-        userId: insightData.userId
-      });
-
       const txId = await this.hederaTopicService.saveAIInsight(userId, insightData.data);
-      console.log(`✅ BusinessCoachingService: Business insights saved to blockchain for user ${userId}. TX ID: ${txId}`);
       
-      // Adicionar ao cache local para acesso imediato
       const existingCache = this.recentInsightsCache.get(userId) || [];
       this.recentInsightsCache.set(userId, [...existingCache, insightData]);
-      console.log(`💾 BusinessCoachingService: Added to local cache for ${userId}. Cache now has ${this.recentInsightsCache.get(userId)?.length || 0} items`);
       
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error saving business insights to blockchain:', error);
-      console.error('❌ BusinessCoachingService: Error details:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error saving business insights to blockchain:', error);
     }
   }
 
-  // 🔄 MÉTODO ATUALIZADO: Salvar perfil do usuário na blockchain
   async saveUserProfileToBlockchain(userProfile: UserProfile): Promise<boolean> {
     try {
-      console.log('🔄 BusinessCoachingService.saveUserProfileToBlockchain: Starting...');
-      
-      // Use persistent user ID or generate from profile
       let userId: string;
       try {
         userId = this.getPersistentUserId(userProfile);
       } catch (error) {
-        // If no clerkId, generate from profile data
         userId = this.generateUserIdFromProfile(userProfile);
       }
-      console.log(`🆔 Using user ID: ${userId}`);
-      
-      console.log(`📝 Saving user profile for: ${userId}`);
-      console.log(`👤 Profile data present: ${!!userProfile}`);
       
       if (!userProfile) {
         throw new Error('User profile is required');
       }
       
       const txId = await this.hederaTopicService.saveUserProfile(userId, userProfile);
-      
-      console.log(`✅ BusinessCoachingService: User profile saved to blockchain. TX ID: ${txId}`);
       return true;
       
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error saving user profile to blockchain:', error);
+      console.error('Error saving user profile to blockchain:', error);
       return false;
     }
   }
 
-  // 🔄 MÉTODO ATUALIZADO: Salvar dados do negócio na blockchain
   async saveBusinessDataToBlockchain(businessData: any, userId: string): Promise<string | null> {
     try {
-      console.log(`🔐 BusinessCoachingService: Saving business data to blockchain for ${userId}...`);
-      
-      // Use the clerkId from businessData if available, otherwise use userId
       const clerkId = businessData.clerkId || userId;
-      console.log(`🆔 Using clerkId: ${clerkId}`);
-      
       const txId = await this.hederaTopicService.saveBusinessData(clerkId, businessData);
-      
-      console.log(`✅ BusinessCoachingService: Business data saved to blockchain. TX ID: ${txId}`);
       return txId;
       
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error saving business data to blockchain:', error);
+      console.error('Error saving business data to blockchain:', error);
       return null;
     }
   }
 
-  // 🔄 MÉTODO ATUALIZADO: Salvar conclusão de missão na blockchain
   async saveMissionCompletionToBlockchain(missionData: any): Promise<string | null> {
     try {
       const { userId } = missionData;
-      console.log(`🔐 BusinessCoachingService: Saving mission completion to blockchain for ${userId}...`);
-      
       const txId = await this.hederaTopicService.saveMissionCompletion(userId, missionData);
-      
-      console.log(`✅ BusinessCoachingService: Mission completion saved to blockchain. TX ID: ${txId}`);
       return txId;
       
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error saving mission completion to blockchain:', error);
+      console.error('Error saving mission completion to blockchain:', error);
       return null;
     }
   }
 
-  // 🔄 MÉTODO ATUALIZADO: Buscar dados do usuário da blockchain
   async getUserDataFromBlockchain(userId: string): Promise<any> {
     try {
-      console.log(`🔐 BusinessCoachingService: Reading user data for ${userId}...`);
-      
-      // Buscar dados do cache local (insights recentes)
       const cachedInsights = this.recentInsightsCache.get(userId) || [];
-      console.log(`📊 BusinessCoachingService: Found ${cachedInsights.length} cached insights for ${userId}`);
-      
-      // Buscar dados da blockchain (insights antigos)
       const blockchainData = await this.hederaTopicService.getUserDataFromBlockchain(userId);
       const blockchainInsights = blockchainData?.aiInsights || [];
-      console.log(`📊 BusinessCoachingService: Found ${blockchainInsights.length} blockchain insights for ${userId}`);
-      
-      // Combinar cache + blockchain
       const allInsights = [...cachedInsights, ...blockchainInsights];
-      console.log(`📊 BusinessCoachingService: Total insights for ${userId}: ${allInsights.length}`);
-      console.log(`📊 BusinessCoachingService: Cached insights:`, cachedInsights.length);
-      console.log(`📊 BusinessCoachingService: Blockchain insights:`, blockchainInsights.length);
       
-      // Normalizar formato para ser consistente
-      console.log(`🔍 BusinessCoachingService: Processing ${allInsights.length} insights for normalization`);
-      
-      const normalizedInsights = allInsights.map((insight, index) => {
-        console.log(`🔍 BusinessCoachingService: Processing insight ${index + 1}:`, {
-          hasType: !!insight.type,
-          hasData: !!insight.data,
-          insightKeys: Object.keys(insight)
-        });
-        
-        // Se o insight tem estrutura aninhada (cache), extrair os dados
+      const normalizedInsights = allInsights.map((insight) => {
         if (insight.type && insight.data) {
-          console.log(`🔍 BusinessCoachingService: Insight ${index + 1} has nested structure`);
           return {
             insightType: insight.data.insightType,
             insights: insight.data.insights,
@@ -793,16 +731,13 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
             model: insight.data.model
           };
         }
-        // Se o insight já está no formato correto (blockchain)
-        // Adicionar insightType se não existir (para insights antigos)
+        
         if (!insight.insightType) {
-          console.log(`🔍 BusinessCoachingService: Insight ${index + 1} missing insightType, adding default`);
           return {
             ...insight,
-            insightType: 'daily_missions' // Padrão para insights antigos
+            insightType: 'daily_missions'
           };
         }
-        console.log(`🔍 BusinessCoachingService: Insight ${index + 1} already in correct format`);
         return insight;
       });
       
@@ -814,37 +749,25 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
         allMessages: blockchainData?.allMessages || []
       };
       
-      if (combinedData.aiInsights.length > 0 || combinedData.userProfile || combinedData.businessData) {
-        console.log(`✅ BusinessCoachingService: User data retrieved successfully`);
-        return combinedData;
-      } else {
-        console.log(`ℹ️  BusinessCoachingService: No data found for user ${userId} - returning empty structure`);
-        return combinedData; // Return empty structure instead of null
-      }
+      return combinedData;
 
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error reading user data:', error);
+      console.error('Error reading user data:', error);
       return null;
     }
   }
 
-  // 🔄 MÉTODO PÚBLICO: Salvar insights de negócio na blockchain
   async saveBusinessInsightToBlockchain(userId: string, insightData: any): Promise<string | null> {
     try {
-      console.log(`💾 BusinessCoachingService: Saving business insight to blockchain for ${userId}...`);
-      
       const txId = await this.hederaTopicService.saveAIInsight(userId, insightData);
-      
-      console.log(`✅ BusinessCoachingService: Business insight saved to blockchain. TX ID: ${txId}`);
       return txId;
       
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error saving business insight to blockchain:', error);
+      console.error('Error saving business insight to blockchain:', error);
       return null;
     }
   }
 
-  // 🔄 MÉTODO PÚBLICO: Obter dados do cache
   getCacheData(userId: string): any {
     const cachedInsights = this.recentInsightsCache.get(userId) || [];
     return {
@@ -854,11 +777,8 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     };
   }
 
-  // 🔄 MÉTODO ATUALIZADO: Buscar informações do tópico
   async getTopicInfo(userId: string): Promise<any> {
     try {
-      console.log(`🔐 BusinessCoachingService: Getting topic info for ${userId}...`);
-      
       const topicData = await this.hederaTopicService.getUserTopic(userId);
       
       if (topicData) {
@@ -870,33 +790,27 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
           topicInfo
         };
       } else {
-        console.log(`❌ BusinessCoachingService: No topic found for user ${userId}`);
         return null;
       }
       
     } catch (error) {
-      console.error('❌ BusinessCoachingService: Error getting topic info:', error);
+      console.error('Error getting topic info:', error);
       return null;
     }
   }
 
   private getPersistentUserId(userProfile: UserProfile): string {
-    // Use Clerk user ID if available
     if (userProfile && typeof userProfile === 'object' && 'clerkId' in userProfile) {
       return (userProfile as any).clerkId;
     }
     
-    // If no Clerk ID, throw error - we require Clerk authentication
     throw new Error('Clerk user ID is required for blockchain operations');
   }
 
   private generateUserIdFromProfile(userProfile: UserProfile): string {
-    // Generate a unique ID from profile data
     const profileString = JSON.stringify(userProfile);
     const timestamp = Date.now().toString();
     const hash = this.hashString(profileString + timestamp);
-    
-    // Create a readable user ID
     const name = userProfile.personal?.name || 'user';
     const cleanName = name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     
@@ -908,7 +822,7 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
   }

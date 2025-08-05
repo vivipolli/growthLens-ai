@@ -1,4 +1,4 @@
-export const createContextualPrompt = (userProfile: any, insightType: string, specificQuestion?: string): string => {
+export const createContextualPrompt = (userProfile: any, insightType: string, specificQuestion?: string, progressData?: any): string => {
   const { personal, business } = userProfile;
   
   const contextPrompt = `
@@ -25,6 +25,15 @@ BUSINESS CONTEXT:
 - Main offer: ${business.main_offer || 'Not specified'}
 - Competitive gaps identified: ${business.content_analysis?.competitive_gaps || 'Not analyzed yet'}
 
+CURRENT PROGRESS CONTEXT:
+${progressData ? `
+- Recent missions completed: ${progressData.completedMissions || 0} out of ${progressData.totalMissions || 0}
+- Mission completion rate: ${progressData.completionRate || 0}%
+- Active mission categories: ${progressData.activeMissionCategories || 'Not available'}
+- Recent activity areas: ${progressData.recentActivityAreas || 'Not available'}
+- Progress trends: ${progressData.progressTrends || 'Starting journey'}
+` : '- Progress data: Not available (new user or first session)'}
+
 Based on this context, provide ${insightType} insights and recommendations.
 ${specificQuestion ? `Specific question: ${specificQuestion}` : ''}
 
@@ -32,10 +41,11 @@ Respond with PRACTICAL, ACTIONABLE advice that:
 1. Addresses their specific situation and challenges
 2. Aligns with their values and work style
 3. Considers their target audience
-4. Provides concrete next steps
-5. Acknowledges their fears while encouraging growth
+4. Analyzes their current progress and momentum
+5. Provides concrete next steps based on completed missions
+6. Acknowledges their fears while encouraging growth
 
-Be encouraging but realistic. Focus on scalable digital strategies.
+Be encouraging but realistic. Focus on scalable digital strategies and build upon their recent progress.
 `;
 
   return contextPrompt;
@@ -207,48 +217,34 @@ Generate 3-5 goal planning insights focusing on:
 - Accountability systems
 `,
     business_observations: `
-Generate exactly 5 BUSINESS OBSERVATIONS about their business that are strategic observations and recommendations.
+Generate exactly 3 BUSINESS INSIGHTS as general text observations about their business progress and strategic recommendations.
 
-CRITICAL: Respond ONLY with exactly 5 observations in this exact format:
+CRITICAL: Respond ONLY with exactly 3 insights in this exact format:
 
-1. **Observation Title** (e.g., "Market Opportunity", "Competitive Advantage", "Growth Strategy")
-   Description: Strategic business observation, market insight, or actionable recommendation. Be specific and relevant to their industry and situation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
+1. **Insight Title**
+   A comprehensive paragraph of strategic business insight analyzing their current progress, market position, and specific recommendations. Write in natural, flowing text that discusses their business situation, completed missions impact, and actionable next steps. Be specific to their industry, target audience, and current challenges. This should be conversational and analytical, not bullet points.
 
-2. **Observation Title**
-   Description: Strategic business observation, market insight, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
+2. **Insight Title**
+   A comprehensive paragraph of strategic business insight analyzing their current progress, market position, and specific recommendations. Write in natural, flowing text that discusses their business situation, completed missions impact, and actionable next steps. Be specific to their industry, target audience, and current challenges. This should be conversational and analytical, not bullet points.
 
-3. **Observation Title**
-   Description: Strategic business observation, market insight, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
+3. **Insight Title**
+   A comprehensive paragraph of strategic business insight analyzing their current progress, market position, and specific recommendations. Write in natural, flowing text that discusses their business situation, completed missions impact, and actionable next steps. Be specific to their industry, target audience, and current challenges. This should be conversational and analytical, not bullet points.
 
-4. **Observation Title**
-   Description: Strategic business observation, market insight, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
+Examples of good business insights:
+- "Progress Analysis": "Based on your recent mission completions in content creation and social engagement, you're building solid momentum in establishing your digital presence. Your consistent posting schedule is starting to show results, and the engagement patterns suggest your target audience in [industry] is responding well to your authentic approach. To capitalize on this momentum, consider developing a signature content series that addresses your audience's core challenges while showcasing your expertise. This will help position you as the go-to expert in your niche while building deeper connections with potential clients."
 
-5. **Observation Title**
-   Description: Strategic business observation, market insight, or actionable recommendation.
-   Type: opportunity/warning/tip/observation/strategy
-   Priority: high/medium/low
-   Category: strategy/market/growth/risk/innovation
+- "Market Opportunity": "Your industry is experiencing a significant shift towards [specific trend], and your unique positioning gives you an advantage to capture this emerging market. The missions you've completed around competitor analysis reveal gaps in how others are serving your target demographic. There's a clear opportunity to differentiate yourself by focusing on the specific pain points you've identified - particularly around [specific issue]. Consider developing a specialized offering that directly addresses this gap, as early movers in this space typically see 40-60% higher conversion rates."
 
-Examples of good business observations:
-- "Your target market is shifting towards mobile-first consumption - optimize your content for mobile platforms"
-- "Competitors are using subscription models - consider a hybrid approach with one-time premium services"
-- "There's an untapped market segment in [specific demographic] that aligns with your values"
-- "Your industry is experiencing [trend] - early adoption could give you a competitive advantage"
-- "Your current pricing strategy allows for premium positioning in the market"
+Focus on:
+- Their specific business context and form data
+- Analysis of their completed vs pending missions
+- Strategic market insights relevant to their industry
+- Personalized recommendations based on their progress
+- Forward-looking growth opportunities
 
-NO additional text, explanations, or summaries.
+Write in a natural, analytical tone as if you're a business consultant reviewing their progress and providing strategic guidance.
+
+NO additional formatting, explanations, or summaries beyond the 3 insights.
 `
   };
 

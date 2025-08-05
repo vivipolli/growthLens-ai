@@ -7,6 +7,7 @@ import { useUser } from '@clerk/clerk-react'
 import {
     Card,
     Button,
+    DailyMissions,
     MissionLoadingSkeleton,
     GoalsLoadingSkeleton,
     InsightsLoadingSkeleton,
@@ -160,99 +161,29 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                 </div>
 
                 {/* Main Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid gap-8">
                     {/* Left Column - Missions & Goals */}
                     <div className="lg:col-span-2 space-y-8">
                         {/* Daily Missions */}
-                        <Card>
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center space-x-3">
-                                    <h2 className="text-xl font-bold text-gray-900">Daily Missions</h2>
-                                    {personalData?.name && (
-                                        <span className="text-sm text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                                            Personalized for {personalData.name}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                    <span className="text-sm text-gray-500">
-                                        {getCompletedMissionsCount()}/{getTotalMissionsCount()} completed
-                                    </span>
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() => {
-                                            console.log('🖱️ Daily missions refresh button clicked');
-                                            generateDailyMissions();
-                                        }}
-                                        disabled={missionsLoading}
-                                    >
-                                        {missionsLoading ? '🔄' : '✨'} {missionsLoading ? 'Generating...' : 'Refresh'}
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {error && (
-                                <div className="mb-4 p-3 bg-orange-100 border border-orange-300 rounded-lg text-orange-700 text-sm">
-                                    {error}
-                                </div>
-                            )}
-
-
-
-                            <div className="space-y-4">
-                                {missionsLoading ? (
-                                    <MissionLoadingSkeleton />
-                                ) : (!missions || missions.length === 0) ? (
-                                    <MissionEmptyState onGenerate={generateDailyMissions} />
-                                ) : (
-                                    missions.map((mission) => (
-                                        <div
-                                            key={mission.id}
-                                            className={`p-4 rounded-xl border-2 transition-all ${mission.status === 'completed'
-                                                ? 'bg-green-50 border-green-200'
-                                                : 'bg-white border-gray-200 hover:border-purple-300'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center space-x-3 mb-2">
-                                                        <span className="text-lg">
-                                                            {getTypeIcon(mission.type || mission.category)}
-                                                        </span>
-                                                        <h3 className="font-semibold text-gray-900">{mission.title}</h3>
-                                                        {mission.priority && (
-                                                            <span className={`text-xs px-2 py-1 rounded-full ${mission.priority === 'high' ? 'bg-red-100 text-red-600' :
-                                                                mission.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                                                                    'bg-blue-100 text-blue-600'
-                                                                }`}>
-                                                                {mission.priority}
-                                                            </span>
-                                                        )}
-                                                        {mission.status === 'completed' && (
-                                                            <span className="text-green-600">✓</span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-gray-600 mb-2">{mission.description}</p>
-                                                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                                        <span>⏱ {mission.estimatedTime}</span>
-                                                    </div>
-                                                </div>
-                                                {mission.status !== 'completed' && (
-                                                    <Button
-                                                        variant="primary"
-                                                        size="sm"
-                                                        onClick={() => handleMissionComplete(mission.id)}
-                                                    >
-                                                        Complete
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </Card>
+                        {missionsLoading ? (
+                            <Card>
+                                <MissionLoadingSkeleton />
+                            </Card>
+                        ) : missions && missions.length > 0 ? (
+                            <DailyMissions
+                                missions={missions}
+                                onMissionComplete={handleMissionComplete}
+                                loading={false}
+                                completedCount={getCompletedMissionsCount()}
+                                totalCount={getTotalMissionsCount()}
+                                onRefresh={generateDailyMissions}
+                                refreshLoading={missionsLoading}
+                            />
+                        ) : (
+                            <Card>
+                                <MissionEmptyState onGenerate={generateDailyMissions} />
+                            </Card>
+                        )}
 
 
                     </div>

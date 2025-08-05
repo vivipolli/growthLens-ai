@@ -63,9 +63,27 @@ export class AgentController {
   };
 
   healthCheck = async (req: Request, res: Response) => {
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString()
-    });
+    try {
+      // Check if agent service is initialized
+      const agentStatus = await this.agentService.getStatus();
+      
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        services: {
+          agent: agentStatus.initialized ? 'ok' : 'initializing',
+          hedera: agentStatus.hederaConnected ? 'connected' : 'disconnected',
+          ai: agentStatus.aiEnabled ? 'enabled' : 'disabled'
+        },
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0'
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   };
 } 

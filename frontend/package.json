@@ -6,8 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:prod": "NODE_ENV=production vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "preview:prod": "yarn build:prod && vite preview",
+    "vercel:build": "yarn build:prod",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.32.3",

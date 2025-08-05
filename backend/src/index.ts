@@ -24,8 +24,33 @@ async function startServer() {
     app.use(helmet());
     console.log('✅ Helmet security middleware configured');
     
+    // CORS configuration with environment variables
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173', 
+      'http://localhost:5174',
+      process.env.FRONTEND_URL,
+      process.env.FRONTEND_URL_2,
+      process.env.FRONTEND_URL_3
+    ].filter(Boolean); // Remove undefined values
+
     app.use(cors({
-      origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174'],
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, etc.)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        
+        // In production, be more strict
+        if (process.env.NODE_ENV === 'production') {
+          return callback(new Error('Not allowed by CORS'), false);
+        }
+        
+        // In development, allow all origins
+        return callback(null, true);
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization']
@@ -108,18 +133,23 @@ async function startServer() {
       res.status(500).json({ error: 'Internal server error' });
     });
 
-    const port = config.port;
-    console.log(`🚀 Starting server on port ${port}...`);
+    const port = Number(config.port);
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    console.log(`🚀 Starting server on ${host}:${port}...`);
     
-    app.listen(port, () => {
+    app.listen(port, host, () => {
       console.log('🎉 =================================');
       console.log('🎉 SERVER STARTED SUCCESSFULLY!');
       console.log('🎉 =================================');
-      console.log(`🌐 Server running on port ${port}`);
-      console.log(`🔗 Business Coaching API available at http://localhost:${port}`);
-      console.log(`📋 API Documentation available at http://localhost:${port}`);
-      console.log(`🔍 Health check: http://localhost:${port}/api/agent/health`);
-      console.log(`💬 Business chat: http://localhost:${port}/api/business/chat`);
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `http://${host}:${port}` 
+        : `http://localhost:${port}`;
+      
+      console.log(`🌐 Server running on ${host}:${port}`);
+      console.log(`🔗 Business Coaching API available at ${baseUrl}`);
+      console.log(`📋 API Documentation available at ${baseUrl}`);
+      console.log(`🔍 Health check: ${baseUrl}/api/agent/health`);
+      console.log(`💬 Business chat: ${baseUrl}/api/business/chat`);
       console.log('🎉 =================================');
     });
 

@@ -1,0 +1,24 @@
+# Files to ignore during Vercel deployment
+
+# Development files
+.env.example
+*.md
+VERCEL_DEPLOY.md
+
+# Source files not needed in production
+src/test/
+src/examples/
+
+# Development configs
+vite.config.js.backup
+tsconfig.json.backup
+
+# Logs and cache
+*.log
+.cache/
+.vite-cache/
+
+# Editor files
+.vscode/
+.idea/
+*.sw?

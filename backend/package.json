@@ -6,6 +6,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "start:prod": "NODE_ENV=production node dist/index.js",
+    "build:prod": "NODE_ENV=production tsc",
+    "railway:build": "yarn build:prod",
+    "railway:start": "yarn start:prod",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

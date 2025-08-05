@@ -181,4 +181,12 @@ export class AgentService {
   isAIAvailable(): boolean {
     return this.isInitialized && !!this.basicAgent;
   }
+
+  async getStatus() {
+    return {
+      initialized: this.isInitialized,
+      hederaConnected: !!this.agentSigner,
+      aiEnabled: !!this.basicAgent && !!config.openai.apiKey
+    };
+  }
 } 

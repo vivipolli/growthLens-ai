@@ -8,4 +8,9 @@ export {
   saveBusinessProfile,
   clearUserProfile
 } from './userProfile.js';
-export * from './constants.js'; 
+export * from './constants.js';
+export { 
+  parseMissionDescription, 
+  formatConfidenceLevel, 
+  getMainAction 
+} from './missionParser.js'; 

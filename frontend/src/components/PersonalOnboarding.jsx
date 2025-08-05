@@ -333,15 +333,18 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
         if (currentStep < personalSteps.length - 1) {
             setCurrentStep(currentStep + 1)
         } else {
+            // This is the final step - "Complete Discovery"
+            console.log('✅ Personal Discovery completed - saving to blockchain!')
+            console.log('📊 Final user data:', answers)
+
             if (isEditMode) {
                 saveAnswers(answers)
                 setTimeout(() => {
                     navigate('/')
                 }, 100)
-            } else if (onComplete && typeof onComplete === 'function') {
-                console.log('✅ Personal onboarding completed!')
-                console.log('📊 Final answers:', answers)
-                onComplete(answers)
+            } else {
+                // Save complete user data to blockchain
+                handleSubmit(answers)
             }
         }
     }

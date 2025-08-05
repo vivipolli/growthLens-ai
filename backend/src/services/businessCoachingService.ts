@@ -666,7 +666,7 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     }
   }
 
-  async saveUserProfileToBlockchain(userProfile: UserProfile): Promise<boolean> {
+  async saveUserProfileToBlockchain(userProfile: UserProfile): Promise<string | null> {
     try {
       let userId: string;
       try {
@@ -679,12 +679,22 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
         throw new Error('User profile is required');
       }
       
+      console.log(`💾 Saving complete user profile to blockchain for user: ${userId}`);
+      console.log(`📊 Profile data:`, JSON.stringify(userProfile, null, 2));
+      
       const txId = await this.hederaTopicService.saveUserProfile(userId, userProfile);
-      return true;
+      
+      if (txId) {
+        console.log(`✅ User profile saved to blockchain with transaction ID: ${txId}`);
+        return txId;
+      } else {
+        console.warn('⚠️ No transaction ID returned from Hedera service');
+        return null;
+      }
       
     } catch (error) {
-      console.error('Error saving user profile to blockchain:', error);
-      return false;
+      console.error('❌ Error saving user profile to blockchain:', error);
+      return null;
     }
   }
 

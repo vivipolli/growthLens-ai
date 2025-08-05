@@ -1,11 +1,31 @@
 import { apiCall, apiEndpoints } from '../utils/api.js';
 import { getUserProfile } from '../utils/userProfile.js';
 
+// Helper function to get user profile with Clerk ID
+const getUserProfileWithClerkId = (clerkUserId = null) => {
+  const userProfile = getUserProfile();
+  
+  if (!userProfile) {
+    return null;
+  }
+
+  // Try to get Clerk user ID from global window object if not provided
+  if (!clerkUserId && typeof window !== 'undefined' && window.__CLERK_USER_ID__) {
+    clerkUserId = window.__CLERK_USER_ID__;
+  }
+
+  // Add clerkId to the profile
+  return {
+    ...userProfile,
+    clerkId: clerkUserId
+  };
+};
+
 export const businessCoachingService = {
   // Daily Missions API
-  async generateDailyMissions() {
+  async generateDailyMissions(clerkUserId = null) {
     console.log('🎯 generateDailyMissions service called');
-    const userProfile = getUserProfile();
+    const userProfile = getUserProfileWithClerkId(clerkUserId);
     
     if (!userProfile) {
       console.error('❌ User profile not found');
@@ -13,6 +33,7 @@ export const businessCoachingService = {
     }
 
     console.log('✅ User profile found:', userProfile);
+    console.log('🆔 Clerk User ID:', userProfile.clerkId);
 
     const payload = {
       userProfile
@@ -35,42 +56,10 @@ export const businessCoachingService = {
     }
   },
 
-  // Weekly Goals API
-  async generateWeeklyGoals() {
-    console.log('📈 generateWeeklyGoals service called');
-    const userProfile = getUserProfile();
-    
-    if (!userProfile) {
-      console.error('❌ User profile not found');
-      throw new Error('User profile not found. Please complete your onboarding first.');
-    }
-
-    console.log('✅ User profile found for goals:', userProfile);
-
-    const payload = {
-      userProfile
-    };
-
-    console.log('📡 Making API call for weekly goals');
-
-    try {
-      const response = await apiCall('/api/business/weekly-goals', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      
-      console.log('📥 Weekly goals API response received:', response);
-      return response;
-    } catch (error) {
-      console.error('❌ Weekly goals API call failed:', error);
-      throw error;
-    }
-  },
-
   // Business Observations API
-  async generateBusinessObservations() {
+  async generateBusinessObservations(clerkUserId = null) {
     console.log('💡 generateBusinessObservations service called');
-    const userProfile = getUserProfile();
+    const userProfile = getUserProfileWithClerkId(clerkUserId);
     
     if (!userProfile) {
       console.error('❌ User profile not found');
@@ -99,9 +88,9 @@ export const businessCoachingService = {
     }
   },
 
-  async generatePersonalizedInsights() {
+  async generatePersonalizedInsights(clerkUserId = null) {
     console.log('💡 generatePersonalizedInsights service called');
-    const userProfile = getUserProfile();
+    const userProfile = getUserProfileWithClerkId(clerkUserId);
     
     if (!userProfile) {
       console.error('❌ User profile not found');
@@ -157,7 +146,7 @@ Create insights that:
   },
 
   async generateInsights(insightType, specificQuestion = null) {
-    const userProfile = getUserProfile();
+    const userProfile = getUserProfileWithClerkId(clerkUserId);
     
     if (!userProfile) {
       throw new Error('User profile not found. Please complete your onboarding first.');
@@ -176,7 +165,7 @@ Create insights that:
   },
 
   async getRecommendations(category = null) {
-    const userProfile = getUserProfile();
+    const userProfile = getUserProfileWithClerkId(clerkUserId);
     
     if (!userProfile) {
       throw new Error('User profile not found. Please complete your onboarding first.');
@@ -194,7 +183,7 @@ Create insights that:
   },
 
   async sendChatMessage(message, chatHistory = []) {
-    const userProfile = getUserProfile();
+    const userProfile = getUserProfileWithClerkId(clerkUserId);
     
     if (!userProfile) {
       throw new Error('User profile not found. Please complete your onboarding first.');
@@ -226,6 +215,10 @@ Create insights that:
   },
 
   async saveUserProfileToBlockchain(userId, profileData) {
+    console.log('💾 Saving user profile to blockchain...');
+    console.log('👤 User ID:', userId);
+    console.log('📝 Profile data:', profileData);
+    
     return await apiCall(apiEndpoints.business.saveUserProfile, {
       method: 'POST',
       body: JSON.stringify({ userId, profileData })
@@ -233,6 +226,10 @@ Create insights that:
   },
 
   async saveBusinessDataToBlockchain(userId, businessData) {
+    console.log('💾 Saving business data to blockchain...');
+    console.log('👤 User ID:', userId);
+    console.log('📝 Business data:', businessData);
+    
     return await apiCall(apiEndpoints.business.saveBusinessData, {
       method: 'POST',
       body: JSON.stringify({ userId, businessData })
@@ -305,6 +302,28 @@ Create insights that:
       return insights;
     } catch (error) {
       console.error('Error fetching all insights:', error);
+      throw error;
+    }
+  },
+
+  // Método para buscar dados do usuário do blockchain
+  async getUserDataFromBlockchain(userId) {
+    try {
+      console.log('🔄 BusinessCoachingService: Fetching blockchain data for user:', userId);
+      
+      const response = await apiCall(`/api/business/user/${encodeURIComponent(userId)}/data`, {
+        method: 'GET'
+      });
+
+      if (response && response.success) {
+        console.log('✅ BusinessCoachingService: Blockchain data retrieved successfully');
+        return response;
+      } else {
+        console.log('ℹ️ BusinessCoachingService: No blockchain data found');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ BusinessCoachingService: Error fetching blockchain data:', error);
       throw error;
     }
   }

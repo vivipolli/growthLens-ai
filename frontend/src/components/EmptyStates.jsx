@@ -18,8 +18,7 @@ export const MissionEmptyState = ({ onGenerate }) => (
 export const GoalsEmptyState = ({ onGenerate }) => (
     <div className="text-center py-8">
         <div className="text-4xl mb-4">🎯</div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Weekly goals being prepared</h3>
-        <p className="text-gray-600 mb-4">AI will generate personalized weekly goals based on your business profile</p>
+
         <Button
             variant="primary"
             onClick={onGenerate}

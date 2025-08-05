@@ -58,10 +58,7 @@ export const testAIMissionGeneration = async () => {
     const missions = await businessCoachingService.generateDailyMissions();
     console.log('✅ Missões geradas:', missions);
     
-    // 3. Gerar metas semanais
-    console.log('📈 Gerando metas semanais...');
-    const goals = await businessCoachingService.generateWeeklyGoals();
-    console.log('✅ Metas geradas:', goals);
+
     
     // 4. Gerar insights personalizados
     console.log('💡 Gerando insights personalizados...');
@@ -160,7 +157,7 @@ export const demonstrateFullIntegration = async () => {
     // 3. Gerar conteúdo dinâmico
     const results = await Promise.allSettled([
       businessCoachingService.generateDailyMissions(),
-      businessCoachingService.generateWeeklyGoals(), 
+ 
       businessCoachingService.generatePersonalizedInsights()
     ]);
     

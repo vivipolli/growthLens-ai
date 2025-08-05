@@ -87,51 +87,7 @@ Examples of good missions:
 
 IMPORTANT: Do NOT include any introductory text, explanations, or summaries. Start directly with "1. **Mission Title**" and end after the 5th mission.
 `,
-    weekly_goals: `
-Generate exactly 4 WEEKLY GOALS that are specific, measurable objectives for this week.
 
-CRITICAL: Respond ONLY with exactly 4 goals in this exact format:
-
-1. **Weekly Goal Title** (e.g., "Increase Instagram Followers", "Create 5 Blog Posts", "Generate 10 Leads")
-   Description: Specific, measurable outcome for this week. Include clear success criteria.
-   Target: [specific number] (e.g., 50, 5, 10, 1000)
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-2. **Weekly Goal Title**
-   Description: Specific, measurable outcome for this week.
-   Target: [specific number]
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-3. **Weekly Goal Title**
-   Description: Specific, measurable outcome for this week.
-   Target: [specific number]
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-4. **Weekly Goal Title**
-   Description: Specific, measurable outcome for this week.
-   Target: [specific number]
-   Unit: followers/posts/leads/revenue/engagement/etc
-   Timeline: This week
-   Priority: high/medium/low
-   Category: growth/content/revenue/engagement
-
-Examples of good weekly goals:
-- "Increase Instagram followers by 50"
-- "Create 5 blog posts for content calendar"
-- "Generate 10 qualified leads"
-- "Achieve 1000 website visitors"
-
-NO additional text, explanations, or summaries.
-`,
     ai_insights: `
 Generate exactly 5 AI INSIGHTS about their business that are strategic observations and recommendations.
 

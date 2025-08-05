@@ -156,7 +156,7 @@ async function testAllAPIs() {
   await testDailyMissions();
   console.log('\n' + '='.repeat(50) + '\n');
   
-  await testWeeklyGoals();
+
   console.log('\n' + '='.repeat(50) + '\n');
   
   await testAIInsights();

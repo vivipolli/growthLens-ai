@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/clerk-react'
 import { businessCoachingService } from '../services/businessCoachingService'
 import { apiCall } from '../utils/api.js'
 
 export const useDailyMissions = () => {
+  const { user } = useUser()
   const [dailyMissions, setDailyMissions] = useState([])
-  const [weeklyGoals, setWeeklyGoals] = useState([])
+
   const [aiInsights, setAiInsights] = useState([])
   const [missionCompletions, setMissionCompletions] = useState([])
   const [error, setError] = useState(null)
@@ -16,12 +18,11 @@ export const useDailyMissions = () => {
   const [goalsLoading, setGoalsLoading] = useState(false)
   const [insightsLoading, setInsightsLoading] = useState(false)
 
-  // Get user data from blockchain
-  const personalData = JSON.parse(localStorage.getItem('personalOnboardingAnswers') || '{}')
-  const userId = personalData.name || 'anonymous'
+  // Use Clerk user ID
+  const userId = user?.id
 
   const loadMissionsFromBlockchain = async () => {
-    if (!userId || userId === 'anonymous') return
+    if (!userId) return
 
     try {
       console.log('🔄 Loading missions from blockchain for:', userId)
@@ -39,9 +40,7 @@ export const useDailyMissions = () => {
           const dailyMissionsInsights = blockchainData.aiInsights.filter(
             insight => insight.insightType === 'daily_missions'
           )
-          const weeklyGoalsInsights = blockchainData.aiInsights.filter(
-            insight => insight.insightType === 'weekly_goals'
-          )
+
           const businessObservationsInsights = blockchainData.aiInsights.filter(
             insight => insight.insightType === 'business_observations'
           )
@@ -61,19 +60,7 @@ export const useDailyMissions = () => {
             setDailyMissions(missions)
           }
           
-          if (weeklyGoalsInsights.length > 0) {
-            const goals = weeklyGoalsInsights[0].insights.map((insight, index) => ({
-              id: index + 1,
-              title: insight.title,
-              description: insight.content,
-              status: 'pending',
-              type: insight.category || 'strategy',
-              estimatedTime: insight.timeline || 'This week',
-              priority: insight.priority || 'medium',
-              category: insight.category || 'strategy'
-            }))
-            setWeeklyGoals(goals)
-          }
+
           
           // Manter apenas business observations para AIInsights
           setAiInsights(businessObservationsInsights)
@@ -85,7 +72,7 @@ export const useDailyMissions = () => {
           setMissionCompletions(blockchainData.missionCompletions)
         }
         
-        // For now, we'll still use the API for daily missions and weekly goals
+        // For now, we'll still use the API for daily missions
         // as they are generated dynamically by AI
         console.log('📊 Blockchain data loaded:', {
           userProfile: !!blockchainData.userProfile,
@@ -101,7 +88,7 @@ export const useDailyMissions = () => {
 
   // Generate Daily Missions
   const generateDailyMissions = async () => {
-    if (!personalData.name) {
+    if (!user?.id) {
       setError('Please complete your onboarding first')
       return
     }
@@ -111,7 +98,7 @@ export const useDailyMissions = () => {
 
     try {
       console.log('🎯 Generating daily missions...')
-      const response = await businessCoachingService.generateDailyMissions()
+      const response = await businessCoachingService.generateDailyMissions(user?.id)
       
       console.log('📥 Daily missions API Response:', response)
 
@@ -154,65 +141,11 @@ export const useDailyMissions = () => {
     }
   }
 
-  // Generate Weekly Goals
-  const generateWeeklyGoals = async () => {
-    if (!personalData.name) {
-      setError('Please complete your onboarding first')
-      return
-    }
 
-    setGoalsLoading(true)
-    setError(null)
-
-    try {
-      console.log('📈 Generating weekly goals...')
-      const response = await businessCoachingService.generateWeeklyGoals()
-      
-      console.log('📥 Weekly goals API Response:', response)
-
-      let responseData = response
-      if (response.success && response.data) {
-        responseData = response.data
-      } else if (response.insights) {
-        responseData = response
-      }
-
-      if (responseData && responseData.insights) {
-        console.log('✅ Weekly goals generated successfully:', responseData)
-        
-        const insights = responseData.insights || []
-        console.log('📊 Converting insights to goals:', insights.length)
-        
-        const goals = insights.map((insight, index) => ({
-          id: index + 1,
-          title: insight.title,
-          progress: 0,
-          target: 100,
-          unit: 'completion',
-          status: 'in-progress',
-          description: insight.content,
-          timeline: insight.timeline || 'This week',
-          priority: insight.priority || 'medium'
-        }))
-        
-        console.log('📈 Setting goals:', goals.length)
-        setWeeklyGoals(goals)
-        setLastGenerated(new Date().toISOString())
-      } else {
-        console.error('❌ Invalid weekly goals response format:', responseData)
-        setError('Invalid response format from weekly goals API')
-      }
-    } catch (error) {
-      console.error('❌ Error generating weekly goals:', error)
-      setError(error.message || 'Failed to generate weekly goals')
-    } finally {
-      setGoalsLoading(false)
-    }
-  }
 
   // Generate Business Observations
   const generateBusinessObservations = async () => {
-    if (!personalData.name) {
+    if (!user?.id) {
       setError('Please complete your onboarding first')
       return
     }
@@ -255,7 +188,7 @@ export const useDailyMissions = () => {
 
   // Generate all data (for initial load)
   const generateAllData = async () => {
-    if (!personalData.name) {
+    if (!user?.id) {
       setError('Please complete your onboarding first')
       return
     }
@@ -269,7 +202,6 @@ export const useDailyMissions = () => {
       // Generate all sections in parallel
       await Promise.all([
         generateDailyMissions(),
-        generateWeeklyGoals(),
         generateBusinessObservations()
       ])
       
@@ -299,19 +231,11 @@ export const useDailyMissions = () => {
     )
   }
 
-  const updateGoalProgress = (goalId) => {
-    setWeeklyGoals(prevGoals => 
-      prevGoals.map(goal => 
-        goal.id === goalId 
-          ? { ...goal, progress: Math.min(goal.progress + 1, goal.target) }
-          : goal
-      )
-    )
-  }
+
 
   const clearCache = () => {
     setDailyMissions([])
-    setWeeklyGoals([])
+
     setAiInsights([])
     setError(null)
     console.log('🗑️ Cache cleared')
@@ -326,11 +250,10 @@ export const useDailyMissions = () => {
     
     // Don't auto-generate data - let user click individual refresh buttons
     console.log('🔄 Hook: Blockchain data loaded, ready for individual generation')
-  }, [personalData.name])
+  }, [user?.id])
 
   return {
     dailyMissions,
-    weeklyGoals,
     aiInsights,
     missionCompletions,
     error,
@@ -342,7 +265,7 @@ export const useDailyMissions = () => {
     insightsLoading,
     // Individual refresh functions
     generateDailyMissions,
-    generateWeeklyGoals,
+
     generateBusinessObservations,
     // Legacy functions for compatibility
     generateMissions: generateAllData,
@@ -351,7 +274,7 @@ export const useDailyMissions = () => {
     getCompletedMissionsCount,
     getTotalMissionsCount,
     completeMission,
-    updateGoalProgress,
+
     clearCache
   }
 } 

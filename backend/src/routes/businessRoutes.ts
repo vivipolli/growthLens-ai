@@ -64,11 +64,7 @@ router.post('/daily-missions', (req, res) => {
   businessController.generateInsights(req, res);
 });
 
-// Weekly Goals API
-router.post('/weekly-goals', (req, res) => {
-  console.log('📍 Business Route: /weekly-goals called');
-  businessController.generateInsights(req, res);
-});
+
 
 // Business Observations API
 router.post('/business-observations', (req, res) => {
@@ -113,6 +109,17 @@ router.post('/recommendations', (req, res) => {
 
 router.get('/user/:userId/data', (req, res) => {
   console.log('📍 Business Route: /user/:userId/data called');
+  businessController.getUserDataFromBlockchain(req, res);
+});
+
+// 🔄 ENDPOINT SIMPLES: Usar qualquer ID único
+router.get('/user/clerk/:clerkId/data', (req, res) => {
+  console.log('📍 Business Route: /user/clerk/:clerkId/data called');
+  businessController.getUserDataFromBlockchain(req, res);
+});
+
+router.get('/user/hedera/:accountId/data', (req, res) => {
+  console.log('📍 Business Route: /user/hedera/:accountId/data called');
   businessController.getUserDataFromBlockchain(req, res);
 });
 

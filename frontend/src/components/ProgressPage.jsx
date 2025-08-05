@@ -7,7 +7,7 @@ import { useDailyMissions, useUserProfile } from '../hooks';
 const ProgressPage = () => {
     const navigate = useNavigate();
     const { userProfile, loading: profileLoading } = useUserProfile();
-    const { dailyMissions, weeklyGoals, missionCompletions, loading: missionsLoading } = useDailyMissions();
+    const { dailyMissions, missionCompletions, loading: missionsLoading } = useDailyMissions();
 
     const [selectedPeriod, setSelectedPeriod] = useState('week'); // 'week', 'month', 'all'
     const [completionStats, setCompletionStats] = useState({
@@ -20,26 +20,21 @@ const ProgressPage = () => {
 
     // Calculate completion statistics
     useEffect(() => {
-        if (dailyMissions && weeklyGoals && missionCompletions) {
+        if (dailyMissions && missionCompletions) {
             const dailyCompleted = missionCompletions.filter(m => m.type === 'daily_missions').length;
-            const weeklyCompleted = missionCompletions.filter(m => m.type === 'weekly_goals').length;
 
             const dailyTotal = dailyMissions.length;
-            const weeklyTotal = weeklyGoals.length;
-
-            const totalCompleted = dailyCompleted + weeklyCompleted;
-            const totalMissions = dailyTotal + weeklyTotal;
+            const totalCompleted = dailyCompleted;
+            const totalMissions = dailyTotal;
             const completionRate = totalMissions > 0 ? Math.round((totalCompleted / totalMissions) * 100) : 0;
 
             setCompletionStats({
                 dailyCompleted,
                 dailyTotal,
-                weeklyCompleted,
-                weeklyTotal,
                 completionRate
             });
         }
-    }, [dailyMissions, weeklyGoals, missionCompletions]);
+    }, [dailyMissions, missionCompletions]);
 
     // Get user goals from profile
     const getUserGoals = () => {
@@ -181,23 +176,7 @@ const ProgressPage = () => {
                         </div>
                     </Card>
 
-                    {/* Weekly Goals */}
-                    <Card>
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-green-600 mb-2">
-                                {completionStats.weeklyCompleted}/{completionStats.weeklyTotal}
-                            </div>
-                            <div className="text-sm text-gray-400">Weekly Goals</div>
-                            <div className="mt-2">
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                        className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${getProgressPercentage(completionStats.weeklyCompleted, completionStats.weeklyTotal)}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
+
 
                     {/* Streak */}
                     <Card>
@@ -285,7 +264,7 @@ const ProgressPage = () => {
                                                 <div>
                                                     <h3 className="font-medium text-gray-900">{completion.title}</h3>
                                                     <p className="text-sm text-gray-400">
-                                                        {completion.type === 'daily_missions' ? 'Daily Mission' : 'Weekly Goal'}
+                                                        Daily Mission
                                                     </p>
                                                 </div>
                                             </div>

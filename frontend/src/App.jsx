@@ -2,6 +2,9 @@ import React, { useState } from 'react'
 import { ClerkProvider, useAuth, SignedIn, SignedOut, SignIn } from '@clerk/clerk-react'
 import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom'
 import { JourneyManager, PersonalOnboarding, BusinessOnboarding, Header, ProgressPage } from './components'
+import { useUserChange } from './hooks/useUserChange'
+import { useOnboardingStatus } from './hooks/useOnboardingStatus'
+import { useBlockchainOnboarding } from './hooks/useBlockchainOnboarding'
 
 // Clerk publishable key (in production, use environment variable)
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_demo_key'
@@ -10,100 +13,24 @@ console.log('🔧 App.jsx: Clerk key:', CLERK_PUBLISHABLE_KEY ? 'Configured' : '
 
 // Helper function to check if onboarding is complete
 const isOnboardingComplete = () => {
-  try {
-    const personal = localStorage.getItem('personalOnboardingAnswers')
-    const business = localStorage.getItem('businessOnboardingAnswers')
-
-    console.log('🔍 isOnboardingComplete check:')
-    console.log('🔍 personal exists:', !!personal)
-    console.log('🔍 business exists:', !!business)
-
-    // Check if the data is valid JSON and not empty
-    let personalValid = false
-    let businessValid = false
-
-    if (personal) {
-      try {
-        const personalData = JSON.parse(personal)
-        personalValid = personalData && Object.keys(personalData).length > 0
-        console.log('🔍 personal data valid:', personalValid)
-      } catch (e) {
-        console.log('🔍 personal data invalid JSON')
-      }
-    }
-
-    if (business) {
-      try {
-        const businessData = JSON.parse(business)
-        businessValid = businessData && Object.keys(businessData).length > 0
-        console.log('🔍 business data valid:', businessValid)
-      } catch (e) {
-        console.log('🔍 business data invalid JSON')
-      }
-    }
-
-    const result = personalValid && businessValid
-    console.log('🔍 Final result - onboarding complete:', result)
-    return result
-  } catch (error) {
-    console.error('❌ Error checking onboarding completion:', error)
-    return false
-  }
+  // For now, always return false to force onboarding
+  // In the future, this will check blockchain data
+  console.log('🔍 isOnboardingComplete: Always false (blockchain-only mode)')
+  return false
 }
 
 // Helper function to check which onboarding step to redirect to
 const getNextOnboardingStep = () => {
-  try {
-    const personal = localStorage.getItem('personalOnboardingAnswers')
-    const business = localStorage.getItem('businessOnboardingAnswers')
-
-    console.log('🔍 getNextOnboardingStep check:')
-    console.log('🔍 personalOnboardingAnswers:', personal)
-    console.log('🔍 businessOnboardingAnswers:', business)
-
-    // Check if personal onboarding is complete
-    let personalComplete = false
-    if (personal) {
-      try {
-        const personalData = JSON.parse(personal)
-        personalComplete = personalData && Object.keys(personalData).length > 0
-      } catch (e) {
-        console.log('🔍 personal data invalid JSON')
-      }
-    }
-
-    // Check if business onboarding is complete
-    let businessComplete = false
-    if (business) {
-      try {
-        const businessData = JSON.parse(business)
-        businessComplete = businessData && Object.keys(businessData).length > 0
-      } catch (e) {
-        console.log('🔍 business data invalid JSON')
-      }
-    }
-
-    console.log('🔍 personalComplete:', personalComplete)
-    console.log('🔍 businessComplete:', businessComplete)
-
-    if (!personalComplete) {
-      console.log('🔄 Redirecting to personal onboarding')
-      return '/onboarding/personal'
-    }
-    if (!businessComplete) {
-      console.log('🔄 Redirecting to business onboarding')
-      return '/onboarding/business'
-    }
-    console.log('✅ Both onboarding steps complete')
-    return null // Both completed
-  } catch (error) {
-    console.error('❌ Error getting next onboarding step:', error)
-    return '/onboarding/personal'
-  }
+  // For now, always redirect to personal onboarding
+  // In the future, this will check blockchain data
+  console.log('🔄 getNextOnboardingStep: Always personal onboarding (blockchain-only mode)')
+  return '/onboarding/personal'
 }
 
 function AppContent() {
   const { isSignedIn, user, isLoaded } = useAuth()
+  const { isNewUser, needsOnboarding, resetUserData } = useUserChange()
+  const { isComplete, nextStep, loading: onboardingLoading } = useOnboardingStatus()
 
   const syncWithBackend = async () => {
     try {
@@ -163,6 +90,14 @@ function AppContent() {
       console.log('❌ Conditions not met for sync')
     }
   }, [isLoaded, isSignedIn, user])
+
+  // Force onboarding for new users or when data is missing
+  React.useEffect(() => {
+    if (needsOnboarding) {
+      console.log('🔄 Forcing onboarding due to user change or missing data');
+      // No need to clear localStorage since we're not using it
+    }
+  }, [needsOnboarding]);
 
   return (
     <Router>
@@ -292,36 +227,84 @@ function BusinessOnboardingWrapper() {
 
 function OnboardingRedirect() {
   const navigate = useNavigate()
+  const { isComplete, nextStep, loading: onboardingLoading } = useOnboardingStatus()
+  const { checkAndRedirectIfComplete, fillFormsWithBlockchainData } = useBlockchainOnboarding()
 
   console.log('🔧 OnboardingRedirect component rendered')
-  console.log('🔧 Current user state - isLoaded: true, isSignedIn: true')
+  console.log('🔧 Onboarding status:', { isComplete, nextStep, loading: onboardingLoading })
 
   React.useEffect(() => {
-    console.log('🔄 OnboardingRedirect useEffect triggered')
-    const nextStep = getNextOnboardingStep()
-    console.log('🔄 nextStep determined:', nextStep)
-
-    if (nextStep) {
-      console.log('🔄 Redirecting to onboarding:', nextStep)
-      navigate(nextStep, { replace: true })
-    } else {
-      console.log('✅ Onboarding complete, showing dashboard')
+    if (onboardingLoading) {
+      console.log('⏳ Loading onboarding status...');
+      return;
     }
-  }, [navigate])
+
+    console.log('🔄 OnboardingRedirect useEffect triggered');
+    console.log('🔄 isComplete:', isComplete);
+    console.log('🔄 nextStep:', nextStep);
+
+    // Verificar blockchain apenas se não tem dados locais
+    const checkBlockchainIfNeeded = async () => {
+      const personalData = localStorage.getItem('personalOnboardingAnswers');
+      const businessData = localStorage.getItem('businessOnboardingAnswers');
+
+      // Se não tem dados locais E dados não estão completos, tentar carregar do blockchain
+      if (!isComplete && (!personalData || !businessData)) {
+        console.log('🔗 No local data found, checking blockchain for complete data...');
+
+        try {
+          const hasCompleteData = await checkAndRedirectIfComplete();
+          if (hasCompleteData) {
+            console.log('🎉 Complete blockchain data found, redirecting handled by hook');
+            return; // Early return, redirect will be handled
+          }
+        } catch (error) {
+          console.log('ℹ️ Blockchain check failed, continuing with normal flow:', error.message);
+        }
+      }
+
+      // Continue with normal onboarding flow
+      if (isComplete) {
+        console.log('✅ Onboarding complete, showing dashboard');
+        // Don't navigate, just render dashboard
+      } else if (nextStep) {
+        console.log('🔄 Redirecting to onboarding:', nextStep);
+        navigate(nextStep, { replace: true });
+      } else {
+        console.log('🔄 Defaulting to personal onboarding');
+        navigate('/onboarding/personal', { replace: true });
+      }
+    };
+
+    checkBlockchainIfNeeded();
+  }, [isComplete, nextStep, onboardingLoading, navigate, checkAndRedirectIfComplete]);
+
+  // Show loading while checking onboarding status
+  if (onboardingLoading) {
+    console.log('⏳ Rendering loading state (checking onboarding status)');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking onboarding status...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show dashboard if onboarding is complete
-  if (isOnboardingComplete()) {
-    console.log('✅ Rendering dashboard (onboarding complete)')
+  if (isComplete) {
+    console.log('✅ Rendering dashboard (onboarding complete)');
     return (
       <div>
         <Header />
         <JourneyManager />
       </div>
-    )
+    );
   }
 
   // Show loading while redirecting
-  console.log('⏳ Rendering loading state (redirecting to onboarding)')
+  console.log('⏳ Rendering loading state (redirecting to onboarding)');
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
@@ -329,7 +312,7 @@ function OnboardingRedirect() {
         <p className="text-gray-600">Loading...</p>
       </div>
     </div>
-  )
+  );
 }
 
 function App() {

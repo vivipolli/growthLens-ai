@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
-import { Card, StepItem, AIMentor, Button } from './index'
+import { useBlockchainOnboarding } from '../hooks/useBlockchainOnboarding'
+import { Card, Button, AIMentor } from './index'
 import { useNavigate } from 'react-router-dom'
 import { businessCoachingService } from '../services/businessCoachingService'
+import { useUser } from '@clerk/clerk-react'
 
 const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isEditMode = false }) => {
     const [currentStep, setCurrentStep] = useState(0)
@@ -25,6 +27,13 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
     })
     const { gradients } = useTheme()
     const navigate = useNavigate()
+    const { user } = useUser()
+    const {
+        loading: blockchainLoading,
+        blockchainData,
+        fillSpecificForm,
+        checkAndRedirectIfComplete
+    } = useBlockchainOnboarding()
 
     // Test data for auto-fill
     const testData = {
@@ -77,14 +86,94 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
         saveAnswers(testData)
     }
 
+    // Carregar dados do blockchain
+    const fillBlockchainData = async () => {
+        if (blockchainLoading) {
+            console.log('⏳ Blockchain request already in progress, skipping...')
+            return
+        }
+
+        try {
+            const businessData = await fillSpecificForm('business')
+            if (businessData) {
+                setAnswers(businessData)
+                saveAnswers(businessData)
+                console.log('✅ Business data loaded from blockchain')
+                // Go to last step to show the filled form
+                setCurrentStep(businessSteps.length - 1)
+            } else {
+                console.log('ℹ️ No business data found in blockchain')
+            }
+        } catch (error) {
+            console.error('❌ Error loading blockchain data:', error)
+            if (error.message.includes('Too many requests')) {
+                alert('Muitas requisições. Aguarde alguns segundos e tente novamente.')
+            }
+        }
+    }
+
+    // Verificar dados completos e redirecionar
+    const checkCompleteAndRedirect = async () => {
+        if (blockchainLoading) {
+            console.log('⏳ Blockchain request already in progress, skipping...')
+            return
+        }
+
+        try {
+            const success = await checkAndRedirectIfComplete()
+            if (!success) {
+                alert('Dados incompletos no blockchain. Use o botão "🔗 Load" para preencher o formulário.')
+            }
+        } catch (error) {
+            console.error('❌ Error checking complete data:', error)
+            if (error.message.includes('Too many requests')) {
+                alert('Muitas requisições. Aguarde alguns segundos e tente novamente.')
+            }
+        }
+    }
+
+    // Verificar se há novos dados do blockchain no localStorage após carregamento inicial
+    useEffect(() => {
+        const checkForNewLocalData = () => {
+            try {
+                const localData = localStorage.getItem('businessOnboardingAnswers');
+                if (localData) {
+                    const parsedData = JSON.parse(localData);
+
+                    // Se localStorage tem dados mas o formulário está vazio, carregar os dados
+                    if (Object.keys(parsedData).length > 0 && Object.keys(answers).length === 0) {
+                        console.log('🔄 Found new blockchain data in localStorage, loading into form...');
+                        setAnswers(parsedData);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error checking local data:', error);
+            }
+        };
+
+        // Verificar periodicamente por novos dados (após carregamento do blockchain)
+        const interval = setInterval(checkForNewLocalData, 2000);
+
+        // Verificar imediatamente também
+        checkForNewLocalData();
+
+        return () => clearInterval(interval);
+    }, [answers]);
+
     const saveAnswers = (answers) => {
-        // Save to localStorage for now
-        localStorage.setItem('businessOnboardingAnswers', JSON.stringify(answers))
-        console.log('💾 Saved business data to localStorage:', answers)
+        console.log('💾 Saving business data to blockchain...')
+
+        // Use only Clerk user ID - no fallback needed
+        const userId = user?.id;
+        console.log(`🆔 Using Clerk ID: ${userId}`);
+
+        if (!userId) {
+            console.error('❌ No Clerk user ID available');
+            return;
+        }
 
         // Save to blockchain
         try {
-            const userId = personalData?.name || 'anonymous'
             businessCoachingService.saveBusinessDataToBlockchain(userId, answers)
                 .then(response => {
                     if (response.success) {
@@ -92,6 +181,8 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                         if (response.transactionId) {
                             console.log(`🔗 HashScan URL: ${response.hashscanUrl}`)
                         }
+                        // Navigate to dashboard after business onboarding is complete
+                        navigate('/', { replace: true });
                     }
                 })
                 .catch(error => {
@@ -100,11 +191,6 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
         } catch (error) {
             console.error('❌ Error saving to blockchain:', error)
         }
-
-        // Future: send to AI agent or blockchain here
-        // Example:
-        // sendToAIAgent(answers)
-        // saveToBlockchain(answers)
     }
 
     const journeySteps = [
@@ -736,23 +822,41 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                 {/* Progress Bar */}
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-4">
-                        <h1 className="text-2xl font-bold text-blue-300">Business Journey</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-blue-300">Business Journey</h1>
+                            {blockchainLoading && (
+                                <div className="flex items-center gap-2 text-purple-300 text-sm">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-300"></div>
+                                    <span>Loading blockchain data...</span>
+                                </div>
+                            )}
+                        </div>
                         <div className="flex gap-2">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={fillBlockchainData}
+                                disabled={blockchainLoading}
+                                className="bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300 text-xs"
+                            >
+                                {blockchainLoading ? '⏳' : '🔗'} Load
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={checkCompleteAndRedirect}
+                                disabled={blockchainLoading}
+                                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border-emerald-300 text-xs"
+                            >
+                                {blockchainLoading ? '⏳' : '🏠'} Auto
+                            </Button>
                             <Button
                                 variant="secondary"
                                 size="sm"
                                 onClick={fillTestDataOnly}
                                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300 text-xs"
                             >
-                                🧪 Fill Data
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={fillTestData}
-                                className="bg-green-100 hover:bg-green-200 text-green-800 border-green-300 text-xs"
-                            >
-                                ⚡ Complete
+                                🧪 Test
                             </Button>
                         </div>
                     </div>

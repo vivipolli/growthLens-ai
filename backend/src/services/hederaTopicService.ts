@@ -4,9 +4,9 @@ import {
   Client,
   TopicCreateTransaction,
   TopicMessageSubmitTransaction,
-  TopicMessageQuery
 } from "@hashgraph/sdk";
 import { config } from '../config/environment';
+import { DataProcessingService } from './dataProcessingService';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -18,78 +18,54 @@ export interface UserTopicData {
 }
 
 export interface TopicMessage {
-  type: 'user_profile' | 'business_data' | 'ai_insight' | 'mission_completion' | 'daily_missions' | 'weekly_goals' | 'business_observations';
+  type: 'user_profile' | 'business_data' | 'ai_insight' | 'mission_completion' | 'daily_missions' | 'business_observations';
   timestamp: string;
   data: any;
   userId: string;
+  chunkIndex?: number;
+  totalChunks?: number;
 }
 
 export class HederaTopicService {
   private client!: Client;
   private isInitialized = false;
   private readonly storageFile = path.join(__dirname, '../../data/userTopics.json');
+  private dataProcessor = new DataProcessingService();
 
   async initialize() {
     try {
-      console.log('🔄 HederaTopicService: Initializing...');
-      
-      // Validate required environment variables
       if (!config.hedera.accountId || !config.hedera.privateKey) {
         throw new Error('Hedera account ID and private key are required');
       }
 
-      // Create client
       this.client = Client.forTestnet();
-      
-      // Set operator
       const accountId = AccountId.fromString(config.hedera.accountId);
       
-      // Handle different private key formats
       let privateKey;
       try {
-        // Try DER format first (common for Hedera accounts)
         privateKey = PrivateKey.fromString(config.hedera.privateKey);
-        console.log('✅ Using DER private key format');
       } catch (error) {
-        console.log('⚠️  DER format failed, trying ED25519 format...');
-        
         try {
-          // Try ED25519 format
           privateKey = PrivateKey.fromStringED25519(config.hedera.privateKey);
-          console.log('✅ Using ED25519 private key format');
         } catch (ed25519Error) {
-          console.log('⚠️  ED25519 format failed, trying alternative formats...');
-          
-          // Try to convert from different formats
           try {
-            // If it's a hex string that's too long, try to extract the actual key
             if (config.hedera.privateKey.length > 64) {
-              // Extract the last 64 characters (32 bytes) as the actual key
               const actualKey = config.hedera.privateKey.slice(-64);
-              console.log(`🔧 Extracting key from longer format: ${actualKey}`);
               privateKey = PrivateKey.fromStringED25519(actualKey);
             } else {
-              // Try as raw hex
               privateKey = PrivateKey.fromStringED25519(config.hedera.privateKey);
             }
-            console.log('✅ Successfully converted private key format');
           } catch (conversionError) {
-            console.error('❌ Failed to convert private key format:', conversionError);
             throw new Error(`Invalid private key format. Expected DER or ED25519 format, got ${config.hedera.privateKey.length} bytes`);
           }
         }
       }
       
       this.client.setOperator(accountId, privateKey);
-      
       this.isInitialized = true;
-      console.log('✅ HederaTopicService: Initialized successfully');
-      console.log(`🔑 Account ID: ${config.hedera.accountId}`);
-      console.log(`🌐 Network: ${config.hedera.network}`);
       
     } catch (error) {
-      console.error('❌ HederaTopicService: Failed to initialize:', error);
-      console.log('⚠️  Blockchain features will be disabled, but service will continue running');
+      console.error('HederaTopicService: Failed to initialize:', error);
       this.isInitialized = false;
     }
   }
@@ -100,25 +76,14 @@ export class HederaTopicService {
     }
 
     try {
-      console.log(`🔄 HederaTopicService: Creating topic for user ${userId}...`);
-
-      // Create topic transaction
       const transaction = new TopicCreateTransaction()
         .setTopicMemo(`User journey data for ${userId}`)
-        .setAutoRenewPeriod(2592000); // 30 days in seconds
+        .setAutoRenewPeriod(2592000);
 
-      // Execute transaction
       const txResponse = await transaction.execute(this.client);
       const receipt = await txResponse.getReceipt(this.client);
-
-      // Get topic ID
       const topicId = receipt.topicId!.toString();
       
-      console.log(`✅ HederaTopicService: Topic created successfully`);
-      console.log(`📋 Topic ID: ${topicId}`);
-      console.log(`🔗 HashScan URL: https://hashscan.io/testnet/topic/${topicId}`);
-
-      // Save topic info to file storage
       const topicData: UserTopicData = {
         userId,
         topicId,
@@ -126,12 +91,10 @@ export class HederaTopicService {
         memo: `User journey data for ${userId}`
       };
 
-      // Save to file
       const userTopics = this.getUserTopics();
       userTopics[userId] = topicData;
       this.saveUserTopics(userTopics);
 
-      // Submit initial user data message
       await this.submitMessage(topicId, {
         type: 'user_profile',
         timestamp: new Date().toISOString(),
@@ -142,7 +105,7 @@ export class HederaTopicService {
       return topicData;
 
     } catch (error) {
-      console.error('❌ HederaTopicService: Failed to create topic:', error);
+      console.error('HederaTopicService: Failed to create topic:', error);
       throw error;
     }
   }
@@ -153,25 +116,17 @@ export class HederaTopicService {
     }
 
     try {
-      console.log(`🔄 HederaTopicService: Submitting message to topic ${topicId}...`);
-      console.log(`📝 Message type: ${message.type}`);
-
-      // Create message transaction
       const transaction = new TopicMessageSubmitTransaction()
         .setTopicId(topicId)
         .setMessage(JSON.stringify(message));
 
-      // Execute transaction
       const txResponse = await transaction.execute(this.client);
       const receipt = await txResponse.getReceipt(this.client);
-
-      console.log(`✅ HederaTopicService: Message submitted successfully`);
-      console.log(`🔗 HashScan URL: https://hashscan.io/testnet/tx/${txResponse.transactionId.toString()}`);
 
       return txResponse.transactionId.toString();
 
     } catch (error) {
-      console.error('❌ HederaTopicService: Failed to submit message:', error);
+      console.error('HederaTopicService: Failed to submit message:', error);
       throw error;
     }
   }
@@ -186,161 +141,431 @@ export class HederaTopicService {
     businessData: any;
     aiInsights: any[];
     missionCompletions: any[];
+    allMessages: any[];
   } | null> {
     try {
-      console.log(`🔄 HederaTopicService: Fetching user data from blockchain for ${userId}...`);
-      
-      // Get user's topic
       const topicData = await this.getUserTopic(userId);
       if (!topicData) {
-        console.log(`❌ HederaTopicService: No topic found for user ${userId}`);
         return null;
       }
 
-      // Fetch messages from Mirror Node API
       const messages = await this.getTopicMessagesFromMirrorNode(topicData.topicId);
-      console.log(`📊 HederaTopicService: Fetched ${messages.length} raw messages from Mirror Node`);
+      const reconstructedMessages = this.dataProcessor.reconstructFragmentedMessages(messages);
       
-      // Reconstruct fragmented messages
-      const reconstructedMessages = this.reconstructFragmentedMessages(messages);
-      console.log(`📊 HederaTopicService: After reconstruction, have ${reconstructedMessages.length} messages`);
-      
-      // Parse and organize messages by type
       const userData = {
         userProfile: null as any,
         businessData: null as any,
         aiInsights: [] as any[],
-        missionCompletions: [] as any[]
+        missionCompletions: [] as any[],
+        allMessages: [] as any[]
       };
 
-      for (const message of reconstructedMessages) {
+      const combinedUserProfile = this.dataProcessor.combineUserDataFromMultipleMessages(reconstructedMessages, 'user_profile');
+      const combinedBusinessData = this.dataProcessor.combineUserDataFromMultipleMessages(reconstructedMessages, 'business_data');
+      
+      const chunkedUserProfile = this.dataProcessor.reconstructChunkedData(reconstructedMessages, 'user_profile');
+      const chunkedBusinessData = this.dataProcessor.reconstructChunkedData(reconstructedMessages, 'business_data');
+      
+      let finalUserProfile = chunkedUserProfile || combinedUserProfile;
+      let finalBusinessData = chunkedBusinessData || combinedBusinessData;
+        
         try {
-          console.log(`🔍 HederaTopicService: Processing message ${message.consensus_timestamp || 'no-timestamp'}`);
-          console.log(`🔍 HederaTopicService: Message preview: ${message.message?.substring(0, 100)}...`);
-          console.log(`🔍 HederaTopicService: Message type: ${message.chunk_info ? 'fragmented' : 'single'}`);
-          console.log(`🔍 HederaTopicService: Message length: ${message.message?.length || 0} characters`);
+          const allBusinessChunks = [];
           
-          // Handle different message formats
-          let messageContent = message.message;
-          
-          // Check if message is base64 encoded
-          if (messageContent && typeof messageContent === 'string') {
-            // Try to decode base64 if it looks like base64
-            // More lenient base64 detection
-            if (messageContent.match(/^[A-Za-z0-9+/=]+$/) && messageContent.length > 20) {
-              try {
-                const decoded = Buffer.from(messageContent, 'base64').toString('utf-8');
-                console.log(`🔧 Base64 decode attempt: ${messageContent.substring(0, 50)}... -> ${decoded.substring(0, 50)}...`);
-                
-                if (decoded.startsWith('{') || decoded.startsWith('[')) {
-                  messageContent = decoded;
-                  console.log('🔧 Decoded base64 message successfully');
-                } else {
-                  console.log('🔧 Base64 decode failed - not valid JSON structure');
-                }
-              } catch (decodeError) {
-                console.log('⚠️ Failed to decode base64, using original message');
+          for (const msg of reconstructedMessages) {
+            try {
+              const content = msg.decoded || msg.message;
+              const parsed = JSON.parse(content);
+              
+              if (parsed.type === 'business_data' && 
+                  parsed.totalChunks === 4 && 
+                  parsed.chunkIndex !== undefined &&
+                  parsed.data) {
+                allBusinessChunks.push(parsed);
               }
-            } else {
-              console.log('🔧 Message does not match base64 pattern');
+            } catch {}
+          }
+          
+          if (allBusinessChunks.length >= 4) {
+            const indices = new Set(allBusinessChunks.map(chunk => chunk.chunkIndex));
+            const hasCompleteSet = [0, 1, 2, 3].every(i => indices.has(i));
+            
+            if (hasCompleteSet) {
+              const latestChunks: Record<number, any> = {};
+              allBusinessChunks.forEach(chunk => {
+                const existing = latestChunks[chunk.chunkIndex];
+                if (!existing || new Date(chunk.timestamp) > new Date(existing.timestamp)) {
+                  latestChunks[chunk.chunkIndex] = chunk;
+                }
+              });
+              
+              const reconstructed: Record<string, any> = {};
+              [0, 1, 2, 3].forEach(index => {
+                const chunk = latestChunks[index];
+                if (chunk && chunk.data) {
+                  Object.assign(reconstructed, chunk.data);
+                }
+              });
+              
+              const fieldCount = Object.keys(reconstructed).length;
+              
+              if (fieldCount >= 10) {
+                finalBusinessData = reconstructed;
+              }
+            }
+          }
+        } catch (error) {
+          // Ignore reconstruction errors
+        }
+        
+        const chunkedBusinessMessages = reconstructedMessages.filter(msg => {
+          try {
+            const content = msg.decoded || msg.message;
+            const parsed = JSON.parse(content);
+            return parsed.type === 'business_data' && parsed.chunkIndex !== undefined;
+          } catch {
+            return false;
+          }
+        });
+        
+        if (chunkedBusinessMessages.length > 0) {
+          const chunksByTotalCount = new Map<number, any[]>();
+          chunkedBusinessMessages.forEach(msg => {
+            try {
+              const content = msg.decoded || msg.message;
+              const parsed = JSON.parse(content);
+              const totalChunks = parsed.totalChunks;
+              
+              if (!chunksByTotalCount.has(totalChunks)) {
+                chunksByTotalCount.set(totalChunks, []);
+              }
+              chunksByTotalCount.get(totalChunks)!.push(parsed);
+            } catch (error) {
+              // Ignore parsing errors
+            }
+          });
+          
+          let bestReconstructedData: any = null;
+          let bestFieldCount = 0;
+          
+          for (const [totalChunks, allChunks] of chunksByTotalCount) {
+            const chunkIndices = new Set(allChunks.map(chunk => chunk.chunkIndex));
+            const expectedIndices = Array.from({length: totalChunks}, (_, i) => i);
+            const hasCompleteSet = expectedIndices.every(index => chunkIndices.has(index));
+            
+            if (hasCompleteSet) {
+              allChunks.sort((a, b) => (a.chunkIndex || 0) - (b.chunkIndex || 0));
+              
+              const recentChunks = new Map<number, any>();
+              for (const chunk of allChunks) {
+                const existing = recentChunks.get(chunk.chunkIndex);
+                if (!existing || new Date(chunk.timestamp) > new Date(existing.timestamp)) {
+                  recentChunks.set(chunk.chunkIndex, chunk);
+                }
+              }
+              
+              const reconstructedData: any = {};
+              for (let i = 0; i < totalChunks; i++) {
+                const chunk = recentChunks.get(i);
+                if (chunk && chunk.data) {
+                  Object.assign(reconstructedData, chunk.data);
+                }
+              }
+              
+              const fieldCount = Object.keys(reconstructedData).length;
+              
+              if (fieldCount > bestFieldCount) {
+                bestFieldCount = fieldCount;
+                bestReconstructedData = reconstructedData;
+              }
             }
           }
           
-          // Try to parse JSON, but be more lenient
+          if (bestReconstructedData && bestFieldCount >= 10) {
+            finalBusinessData = bestReconstructedData;
+          } else if (bestReconstructedData && bestFieldCount > Object.keys(finalBusinessData || {}).length) {
+            finalBusinessData = bestReconstructedData;
+          }
+        }
+        
+        if (!finalBusinessData || Object.keys(finalBusinessData).length < 10) {
+          const allBusinessMessages = reconstructedMessages.filter(msg => {
+            try {
+              const content = msg.decoded || msg.message;
+              const parsed = JSON.parse(content);
+              return parsed.type === 'business_data';
+            } catch {
+              return false;
+            }
+          });
+          
+          if (allBusinessMessages.length > 0) {
+            const messagesWithCompleteness = allBusinessMessages.map(msg => {
+              try {
+                const content = msg.decoded || msg.message;
+                const parsed = JSON.parse(content);
+                const data = parsed.data || {};
+                const fieldCount = Object.keys(data).length;
+                const hasComplexFields = data.competitor_profiles || data.pain_points || data.goals_aspirations;
+                
+                return {
+                  data,
+                  fieldCount,
+                  hasComplexFields: !!hasComplexFields,
+                  timestamp: new Date(parsed.timestamp).getTime()
+                };
+              } catch {
+                return { data: {}, fieldCount: 0, hasComplexFields: false, timestamp: 0 };
+              }
+            });
+            
+            messagesWithCompleteness.sort((a, b) => {
+              if (a.hasComplexFields && !b.hasComplexFields) return -1;
+              if (!a.hasComplexFields && b.hasComplexFields) return 1;
+              if (a.fieldCount !== b.fieldCount) return b.fieldCount - a.fieldCount;
+              return b.timestamp - a.timestamp;
+            });
+            
+            const bestData = messagesWithCompleteness[0];
+            if (bestData.fieldCount > Object.keys(finalBusinessData || {}).length) {
+              finalBusinessData = bestData.data;
+            }
+          }
+        }
+        
+        if (!finalUserProfile || Object.keys(finalUserProfile).length < 5) {
+          const allUserProfileMessages = reconstructedMessages.filter(msg => {
+            try {
+              const content = msg.decoded || msg.message;
+              const parsed = JSON.parse(content);
+              return parsed.type === 'user_profile';
+            } catch {
+              return false;
+            }
+          });
+          
+          if (allUserProfileMessages.length > 0) {
+            const messagesWithCompleteness = allUserProfileMessages.map(msg => {
+              try {
+                const content = msg.decoded || msg.message;
+                const parsed = JSON.parse(content);
+                const data = parsed.data || {};
+                const fieldCount = Object.keys(data).length;
+                const hasComplexFields = data.personal || data.business || data.core_values || data.dream_lifestyle;
+                
+                return {
+                  data,
+                  fieldCount,
+                  hasComplexFields: !!hasComplexFields,
+                  timestamp: new Date(parsed.timestamp).getTime()
+                };
+              } catch {
+                return { data: {}, fieldCount: 0, hasComplexFields: false, timestamp: 0 };
+              }
+            });
+            
+            messagesWithCompleteness.sort((a, b) => {
+              if (a.hasComplexFields && !b.hasComplexFields) return -1;
+              if (!a.hasComplexFields && b.hasComplexFields) return 1;
+              if (a.fieldCount !== b.fieldCount) return b.fieldCount - a.fieldCount;
+              return b.timestamp - a.timestamp;
+            });
+            
+            const bestData = messagesWithCompleteness[0];
+            if (bestData.fieldCount > Object.keys(finalUserProfile || {}).length) {
+              finalUserProfile = bestData.data;
+            }
+          }
+        }
+        
+        if (!finalUserProfile || Object.keys(finalUserProfile).length < 3) {
+          const userProfileMessages = reconstructedMessages.filter(msg => {
+            try {
+              const content = msg.decoded || msg.message;
+              const parsed = JSON.parse(content);
+              return parsed.type === 'user_profile';
+            } catch {
+              return false;
+            }
+          });
+          
+          if (userProfileMessages.length > 0) {
+            userProfileMessages.sort((a, b) => {
+              try {
+                const contentA = a.decoded || a.message;
+                const contentB = b.decoded || b.message;
+                const parsedA = JSON.parse(contentA);
+                const parsedB = JSON.parse(contentB);
+                return new Date(parsedB.timestamp).getTime() - new Date(parsedA.timestamp).getTime();
+              } catch {
+                return 0;
+              }
+            });
+            
+            const mostRecent = userProfileMessages[0];
+            try {
+              const content = mostRecent.decoded || mostRecent.message;
+              const parsed = JSON.parse(content);
+              if (parsed.data && Object.keys(parsed.data).length > 0) {
+                finalUserProfile = parsed.data;
+              }
+            } catch (error) {
+              // Ignore parsing errors
+            }
+          }
+        }
+        
+        const allUserProfileMessages = reconstructedMessages.filter(msg => {
+          try {
+            const content = msg.decoded || msg.message;
+            const parsed = JSON.parse(content);
+            return parsed.type === 'user_profile';
+          } catch {
+            return false;
+          }
+        });
+        
+        if (allUserProfileMessages.length > 0) {
+          const messagesWithCompleteness = allUserProfileMessages.map(msg => {
+            try {
+              const content = msg.decoded || msg.message;
+              const parsed = JSON.parse(content);
+              const data = parsed.data || {};
+              const fieldCount = Object.keys(data).length;
+              const hasName = data.name && data.name !== '@socialmediacreator';
+              const hasLocation = data.location;
+              const hasMotivation = data.primary_motivation;
+              
+              return {
+                data,
+                fieldCount,
+                hasName,
+                hasLocation,
+                hasMotivation,
+                timestamp: new Date(parsed.timestamp).getTime()
+              };
+            } catch {
+              return { data: {}, fieldCount: 0, hasName: false, hasLocation: false, hasMotivation: false, timestamp: 0 };
+            }
+          });
+          
+          messagesWithCompleteness.sort((a, b) => {
+            if (a.hasName && !b.hasName) return -1;
+            if (!a.hasName && b.hasName) return 1;
+            if (a.fieldCount !== b.fieldCount) return b.fieldCount - a.fieldCount;
+            return b.timestamp - a.timestamp;
+          });
+          
+          const bestData = messagesWithCompleteness[0];
+          if (bestData.fieldCount > Object.keys(finalUserProfile || {}).length) {
+            finalUserProfile = bestData.data;
+          }
+        }
+        
+        if (finalUserProfile) {
+          if (finalUserProfile.personal && finalUserProfile.business) {
+            userData.userProfile = finalUserProfile;
+          } else {
+            userData.userProfile = this.dataProcessor.convertLegacyUserProfileToComplete(finalUserProfile);
+          }
+        }
+        
+        if (finalBusinessData) {
+          if (finalBusinessData.target_audience && finalBusinessData.competitors) {
+            userData.businessData = finalBusinessData;
+          } else {
+            userData.businessData = this.dataProcessor.convertLegacyBusinessDataToComplete(finalBusinessData);
+          }
+        }
+
+            for (const message of reconstructedMessages) {
+        try {
+          let messageContent = message.message;
+          
+          if (messageContent && typeof messageContent === 'string') {
+            if (messageContent.match(/^[A-Za-z0-9+/=]+$/) && messageContent.length > 20) {
+              try {
+                const decoded = Buffer.from(messageContent, 'base64').toString('utf-8');
+                
+                if (decoded.startsWith('{') || decoded.startsWith('[')) {
+                  messageContent = decoded;
+                }
+              } catch (decodeError) {
+                // Continue with original message
+              }
+            }
+          }
+          
           let parsedMessage;
           try {
             parsedMessage = JSON.parse(messageContent);
-            console.log('✅ Successfully parsed JSON message');
-            console.log(`🔍 Message type: ${parsedMessage.type}`);
-            console.log(`🔍 Has data: ${!!parsedMessage.data}`);
-            console.log(`🔍 Data keys: ${parsedMessage.data ? Object.keys(parsedMessage.data) : 'none'}`);
           } catch (parseError) {
-            console.log(`⚠️ JSON parsing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
-            console.log(`🔍 Message length: ${messageContent.length} characters`);
-            console.log(`🔍 Message preview: ${messageContent.substring(0, 200)}...`);
-            console.log('⚠️ JSON parsing failed, trying to extract JSON from content');
-            // If JSON parsing fails, try to extract JSON from the content
-            const jsonMatch = messageContent.match(/\{.*\}/s);
-            if (jsonMatch) {
-              try {
-                parsedMessage = JSON.parse(jsonMatch[0]);
-                console.log('🔧 Extracted JSON from message content');
-              } catch (extractError) {
-                console.log('⚠️ Failed to extract JSON from message');
-                continue; // Skip this message
-              }
-            } else {
-              // Try to find partial JSON structures
-              const typeMatch = messageContent.match(/"type"\s*:\s*"([^"]+)"/);
+            parsedMessage = this.dataProcessor.reconstructTruncatedJSON(messageContent);
+            
+            if (!parsedMessage) {
+              const typeMatch = messageContent.match(/"type"\s*:\s*"([^"]+)"/); 
               const insightsMatch = messageContent.match(/"insights"\s*:\s*\[/);
-              const summaryMatch = messageContent.match(/"summary"\s*:\s*"([^"]+)"/);
+              const summaryMatch = messageContent.match(/"summary"\s*:\s*"([^"]+)"/); 
               const userIdMatch = messageContent.match(/"userId"\s*:\s*"([^"]+)"/);
               
               if (typeMatch && insightsMatch) {
-                console.log('🔧 Found partial AI insight message');
-                
-                // Extract insights from the fragmented message
-                const insights = this.extractInsightsFromFragmentedMessage(messageContent);
+                const insights = this.dataProcessor.extractInsightsFromFragmentedMessage(messageContent);
                 
                 parsedMessage = {
                   type: typeMatch[1],
                   data: {
                     insights: insights,
+                    insightType: typeMatch[1],
                     summary: summaryMatch ? summaryMatch[1] : 'Generated insights',
                     timestamp: new Date().toISOString(),
                     userId: userIdMatch ? userIdMatch[1] : 'unknown'
                   }
                 };
               } else {
-                console.log('⚠️ No valid JSON structure found in message');
-                continue; // Skip this message
+                const userProfileMatch = messageContent.match(/"type"\s*:\s*"user_profile"/);
+                const businessDataMatch = messageContent.match(/"type"\s*:\s*"business_data"/);
+                
+                if (userProfileMatch) {
+                  const extractedData = this.dataProcessor.extractUserDataFromTruncatedMessage(messageContent, 'user_profile');
+                  if (extractedData) {
+                    userData.userProfile = extractedData;
+                  }
+                } else if (businessDataMatch) {
+                  const extractedData = this.dataProcessor.extractUserDataFromTruncatedMessage(messageContent, 'business_data');
+                  if (extractedData) {
+                    userData.businessData = extractedData;
+                  }
+                }
+                
+                continue;
               }
             }
           }
           
-          // Validate parsed message has required structure
           if (!parsedMessage || !parsedMessage.type) {
-            console.log('⚠️ Parsed message missing type field');
             continue;
           }
           
           switch (parsedMessage.type) {
             case 'user_profile':
               userData.userProfile = parsedMessage.data;
-              console.log('✅ Found user profile data');
               break;
             case 'business_data':
               userData.businessData = parsedMessage.data;
-              console.log('✅ Found business data');
               break;
             case 'ai_insight':
             case 'daily_missions':
-            case 'weekly_goals':
             case 'business_observations':
-              console.log(`🔍 Processing ${parsedMessage.type} message`);
-              console.log(`🔍 Data structure:`, {
-                hasData: !!parsedMessage.data,
-                hasInsights: !!(parsedMessage.data && parsedMessage.data.insights),
-                insightsCount: parsedMessage.data?.insights?.length || 0,
-                dataKeys: parsedMessage.data ? Object.keys(parsedMessage.data) : []
-              });
-              
               if (parsedMessage.data && parsedMessage.data.insights) {
-                // Handle insights array
                 userData.aiInsights.push({
                   ...parsedMessage.data,
                   timestamp: parsedMessage.timestamp || parsedMessage.data.timestamp
                 });
-                console.log(`✅ Found ${parsedMessage.data.insights.length} insights in ${parsedMessage.type}`);
               } else if (parsedMessage.data) {
-                // Handle single insight
                 userData.aiInsights.push({
                   ...parsedMessage.data,
                   timestamp: parsedMessage.timestamp || parsedMessage.data.timestamp
                 });
-                console.log(`✅ Found single insight in ${parsedMessage.type}`);
-              } else {
-                console.log(`⚠️ No valid data found in ${parsedMessage.type} message`);
               }
               break;
             case 'mission_completion':
@@ -348,147 +573,24 @@ export class HederaTopicService {
                 ...parsedMessage.data,
                 timestamp: parsedMessage.timestamp || parsedMessage.data.timestamp
               });
-              console.log('✅ Found mission completion data');
-              break;
-            default:
-              console.log(`⚠️ Unknown message type: ${parsedMessage.type}`);
               break;
           }
         } catch (error) {
-          console.error('❌ Error parsing message:', error);
-          console.error('❌ Message content preview:', message.message?.substring(0, 100));
+          // Ignore parsing errors
         }
       }
 
-      console.log(`✅ HederaTopicService: Retrieved ${reconstructedMessages.length} reconstructed messages from blockchain`);
-      
-      // Debug: Log what was found
-      console.log(`📊 HederaTopicService: Data summary for ${userId}:`);
-      console.log(`   - User Profile: ${userData.userProfile ? 'Found' : 'Not found'}`);
-      console.log(`   - Business Data: ${userData.businessData ? 'Found' : 'Not found'}`);
-      console.log(`   - AI Insights: ${userData.aiInsights.length} items`);
-      console.log(`   - Mission Completions: ${userData.missionCompletions.length} items`);
-      
-      // Check if we have any data at all
-      const hasAnyData = userData.userProfile || userData.businessData || userData.aiInsights.length > 0 || userData.missionCompletions.length > 0;
-      
-      if (!hasAnyData) {
-        console.log(`⚠️  HederaTopicService: No valid data found in ${reconstructedMessages.length} messages for ${userId}`);
-        console.log(`🔍 HederaTopicService: This might indicate parsing issues or empty messages`);
-        console.log(`🔍 HederaTopicService: Returning empty userData structure instead of null`);
-      }
-      
-      console.log(`✅ HederaTopicService: Returning userData for ${userId} with ${userData.aiInsights.length} insights`);
+      userData.allMessages = this.dataProcessor.processAllMessagesForOutput(reconstructedMessages);
       return userData;
 
     } catch (error) {
-      console.error('❌ HederaTopicService: Failed to get user data from blockchain:', error);
+      console.error('HederaTopicService: Failed to get user data from blockchain:', error);
       return null;
     }
   }
 
-  // 🔄 NOVO MÉTODO: Reconstruir mensagens fragmentadas
-  private reconstructFragmentedMessages(messages: any[]): any[] {
-    const messageGroups = new Map<string, any[]>();
-    
-    console.log(`🔧 HederaTopicService: Processing ${messages.length} messages for reconstruction`);
-    
-    // Group messages by their initial transaction ID
-    for (const message of messages) {
-      if (message.chunk_info && message.chunk_info.initial_transaction_id) {
-        const txId = message.chunk_info.initial_transaction_id.account_id + '@' + message.chunk_info.initial_transaction_id.transaction_valid_start;
-        
-        if (!messageGroups.has(txId)) {
-          messageGroups.set(txId, []);
-        }
-        messageGroups.get(txId)!.push(message);
-        console.log(`🔧 Grouped message ${message.sequence_number} into group ${txId} (chunk ${message.chunk_info.number}/${message.chunk_info.total})`);
-      } else {
-        // Single message without chunk info
-        const singleMessage = {
-          ...message,
-          reconstructed: false
-        };
-        const singleId = `single-${message.sequence_number}`;
-        messageGroups.set(singleId, [singleMessage]);
-        console.log(`🔧 Grouped single message ${message.sequence_number} into group ${singleId}`);
-      }
-    }
-    
-    const reconstructedMessages: any[] = [];
-    
-    console.log(`🔧 HederaTopicService: Found ${messageGroups.size} message groups`);
-    
-    // Reconstruct each group
-    for (const [txId, group] of messageGroups) {
-      console.log(`🔧 Processing group ${txId} with ${group.length} messages`);
-      
-      if (group.length > 1) {
-        // Sort by chunk number
-        group.sort((a, b) => a.chunk_info.number - b.chunk_info.number);
-        console.log(`🔧 Chunk numbers: ${group.map(g => g.chunk_info.number).join(', ')}`);
-        
-        // Combine all chunks
-        let fullMessage = '';
-        for (const chunk of group) {
-          console.log(`🔧 Adding chunk ${chunk.chunk_info.number} (${chunk.message.length} chars)`);
-          fullMessage += chunk.message;
-        }
-        
-        console.log(`🔧 Reconstructed message length: ${fullMessage.length} characters`);
-        console.log(`🔧 Message preview: ${fullMessage.substring(0, 200)}...`);
-        
-        // Create reconstructed message
-        const reconstructedMessage = {
-          ...group[0],
-          message: fullMessage,
-          reconstructed: true
-        };
-        
-        reconstructedMessages.push(reconstructedMessage);
-        console.log(`🔧 Reconstructed message from ${group.length} chunks for transaction ${txId}`);
-      } else {
-        // Single message, no reconstruction needed
-        console.log(`🔧 Single message length: ${group[0].message.length} characters`);
-        reconstructedMessages.push(group[0]);
-        console.log(`🔧 Single message (no reconstruction needed) for ${txId}`);
-      }
-    }
-    
-    console.log(`🔧 HederaTopicService: Reconstructed ${reconstructedMessages.length} messages`);
-    return reconstructedMessages;
-  }
-
-  // 🔄 NOVO MÉTODO: Extrair insights de mensagens fragmentadas
-  private extractInsightsFromFragmentedMessage(messageContent: string): any[] {
-    const insights: any[] = [];
-    
-    // Look for insight objects in the fragmented message
-    const insightMatches = messageContent.match(/\{[^}]*"id"\s*:\s*"[^"]+"[^}]*\}/g);
-    
-    if (insightMatches) {
-      for (const match of insightMatches) {
-        try {
-          // Try to parse each potential insight
-          const insight = JSON.parse(match);
-          if (insight.id && insight.title) {
-            insights.push(insight);
-          }
-        } catch (error) {
-          // Skip invalid insights
-          continue;
-        }
-      }
-    }
-    
-    console.log(`🔧 Extracted ${insights.length} insights from fragmented message`);
-    return insights;
-  }
-
   async getTopicMessagesFromMirrorNode(topicId: string, limit: number = 50): Promise<any[]> {
     try {
-      console.log(`🔄 HederaTopicService: Fetching messages from Mirror Node for topic ${topicId}...`);
-      
       const response = await fetch(
         `https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}/messages?limit=${limit}&order=desc`
       );
@@ -498,21 +600,16 @@ export class HederaTopicService {
       }
 
       const data = await response.json() as any;
-      const messages = data.messages || [];
-
-      console.log(`✅ HederaTopicService: Retrieved ${messages.length} messages from Mirror Node`);
-      return messages;
+      return data.messages || [];
 
     } catch (error) {
-      console.error('❌ HederaTopicService: Failed to fetch messages from Mirror Node:', error);
+      console.error('HederaTopicService: Failed to fetch messages from Mirror Node:', error);
       return [];
     }
   }
 
   async getTopicInfoFromMirrorNode(topicId: string): Promise<any> {
     try {
-      console.log(`🔄 HederaTopicService: Fetching topic info from Mirror Node for ${topicId}...`);
-      
       const response = await fetch(
         `https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}`
       );
@@ -521,56 +618,68 @@ export class HederaTopicService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json() as any;
-      console.log(`✅ HederaTopicService: Retrieved topic info from Mirror Node`);
-      return data;
+      return await response.json();
 
     } catch (error) {
-      console.error('❌ HederaTopicService: Failed to fetch topic info from Mirror Node:', error);
+      console.error('HederaTopicService: Failed to fetch topic info from Mirror Node:', error);
       return null;
     }
   }
 
   async getOrCreateUserTopic(userId: string, userData: any): Promise<UserTopicData> {
-    // Try to get existing topic
     const existingTopic = await this.getUserTopic(userId);
     
     if (existingTopic) {
-      console.log(`📋 HederaTopicService: Found existing topic for user ${userId}: ${existingTopic.topicId}`);
       return existingTopic;
     }
 
-    // Create new topic
-    console.log(`🆕 HederaTopicService: Creating new topic for user ${userId}`);
     return await this.createUserTopic(userId, userData);
   }
 
   async saveUserProfile(userId: string, profileData: any): Promise<string> {
     const topicData = await this.getOrCreateUserTopic(userId, profileData);
+    const chunks = this.dataProcessor.splitDataIntoChunks(profileData, 'user_profile');
+    const txIds: string[] = [];
     
-    return await this.submitMessage(topicData.topicId, {
-      type: 'user_profile',
-      timestamp: new Date().toISOString(),
-      data: profileData,
-      userId
-    });
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const txId = await this.submitMessage(topicData.topicId, {
+        type: 'user_profile',
+        timestamp: new Date().toISOString(),
+        data: chunk,
+        userId,
+        chunkIndex: i,
+        totalChunks: chunks.length
+      });
+      txIds.push(txId);
+    }
+    
+    return txIds[0];
   }
 
   async saveBusinessData(userId: string, businessData: any): Promise<string> {
     const topicData = await this.getOrCreateUserTopic(userId, businessData);
+    const chunks = this.dataProcessor.splitDataIntoChunks(businessData, 'business_data');
+    const txIds: string[] = [];
     
-    return await this.submitMessage(topicData.topicId, {
-      type: 'business_data',
-      timestamp: new Date().toISOString(),
-      data: businessData,
-      userId
-    });
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const txId = await this.submitMessage(topicData.topicId, {
+        type: 'business_data',
+        timestamp: new Date().toISOString(),
+        data: chunk,
+        userId,
+        chunkIndex: i,
+        totalChunks: chunks.length
+      });
+      txIds.push(txId);
+    }
+    
+    return txIds[0];
   }
 
   async saveAIInsight(userId: string, insightData: any): Promise<string> {
     const topicData = await this.getOrCreateUserTopic(userId, insightData);
-    
-    // Determinar o tipo correto baseado no insightType
     const messageType = insightData.insightType || 'ai_insight';
     
     return await this.submitMessage(topicData.topicId, {
@@ -618,30 +727,4 @@ export class HederaTopicService {
     }
   }
 
-  async getTopicMessages(topicId: string, maxMessages: number = 10): Promise<TopicMessage[]> {
-    if (!this.isInitialized) {
-      throw new Error('HederaTopicService not initialized');
-    }
-
-    try {
-      console.log(`🔄 HederaTopicService: Querying messages for topic ${topicId}...`);
-
-      const query = new TopicMessageQuery()
-        .setTopicId(topicId)
-        .setMaxAttempts(3);
-
-      const messages: TopicMessage[] = [];
-      
-      // Note: This is a simplified implementation
-      // In production, you might want to use mirror node API for better performance
-      console.log(`📝 HederaTopicService: Querying topic messages (max: ${maxMessages})`);
-      
-      // For now, return empty array - implement full query logic as needed
-      return messages;
-
-    } catch (error) {
-      console.error('❌ HederaTopicService: Failed to query messages:', error);
-      throw error;
-    }
-  }
 } 

@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
+import { useBlockchainOnboarding } from '../hooks/useBlockchainOnboarding'
 import { Card, Button, AIMentor } from './index'
 import { useNavigate } from 'react-router-dom'
 import { businessCoachingService } from '../services/businessCoachingService'
+import { useUser } from '@clerk/clerk-react'
 
 const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = false }) => {
     const [currentStep, setCurrentStep] = useState(0)
@@ -24,6 +26,13 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
     })
     const { gradients } = useTheme()
     const navigate = useNavigate()
+    const { user } = useUser()
+    const {
+        loading: blockchainLoading,
+        blockchainData,
+        fillSpecificForm,
+        checkAndRedirectIfComplete
+    } = useBlockchainOnboarding()
 
     // Test data for auto-fill
     const testData = {
@@ -46,6 +55,80 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
         // Go to last step to see the complete form
         setCurrentStep(personalSteps.length - 1)
     }
+
+    // Carregar dados do blockchain
+    const fillBlockchainData = async () => {
+        if (blockchainLoading) {
+            console.log('⏳ Blockchain request already in progress, skipping...')
+            return
+        }
+
+        try {
+            const personalData = await fillSpecificForm('personal')
+            if (personalData) {
+                setAnswers(personalData)
+                saveAnswers(personalData)
+                console.log('✅ Personal data loaded from blockchain')
+                // Go to last step to show the filled form
+                setCurrentStep(personalSteps.length - 1)
+            } else {
+                console.log('ℹ️ No personal data found in blockchain')
+            }
+        } catch (error) {
+            console.error('❌ Error loading blockchain data:', error)
+            if (error.message.includes('Too many requests')) {
+                alert('Muitas requisições. Aguarde alguns segundos e tente novamente.')
+            }
+        }
+    }
+
+    // Verificar dados completos e redirecionar
+    const checkCompleteAndRedirect = async () => {
+        if (blockchainLoading) {
+            console.log('⏳ Blockchain request already in progress, skipping...')
+            return
+        }
+
+        try {
+            const success = await checkAndRedirectIfComplete()
+            if (!success) {
+                alert('Dados incompletos no blockchain. Use o botão "🔗 Blockchain" para preencher o formulário.')
+            }
+        } catch (error) {
+            console.error('❌ Error checking complete data:', error)
+            if (error.message.includes('Too many requests')) {
+                alert('Muitas requisições. Aguarde alguns segundos e tente novamente.')
+            }
+        }
+    }
+
+    // Verificar se há novos dados do blockchain no localStorage após carregamento inicial
+    useEffect(() => {
+        const checkForNewLocalData = () => {
+            try {
+                const localData = localStorage.getItem('personalOnboardingAnswers');
+                if (localData) {
+                    const parsedData = JSON.parse(localData);
+
+                    // Se localStorage tem dados mas o formulário está vazio, carregar os dados
+                    if (Object.keys(parsedData).length > 0 && Object.keys(answers).length === 0) {
+                        console.log('🔄 Found new blockchain data in localStorage, loading into form...');
+                        setAnswers(parsedData);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error checking local data:', error);
+            }
+        };
+
+        // Verificar periodicamente por novos dados (após carregamento do blockchain)
+        const interval = setInterval(checkForNewLocalData, 2000);
+
+        // Verificar imediatamente também
+        checkForNewLocalData();
+
+        return () => clearInterval(interval);
+    }, [answers]);
 
     const fillTestDataOnly = () => {
         setAnswers(testData)
@@ -346,29 +429,75 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
     const currentStepData = personalSteps[currentStep]
     const isCurrentStepComplete = isStepComplete(currentStepData)
 
+    const handleSubmit = (answers) => {
+        console.log('📝 Personal onboarding answers:', answers);
+
+        // Use only Clerk user ID - no fallback needed
+        const userId = user?.id;
+        console.log(`🆔 Using Clerk ID: ${userId}`);
+
+        if (!userId) {
+            console.error('❌ No Clerk user ID available');
+            return;
+        }
+
+        // Save to Hedera blockchain
+        businessCoachingService.saveUserProfileToBlockchain(userId, answers)
+            .then(response => {
+                if (response.success) {
+                    console.log('✅ Personal profile saved to blockchain:', response);
+                    // Navigate to business onboarding after personal is complete
+                    navigate('/onboarding/business', { replace: true });
+                } else {
+                    console.error('❌ Failed to save personal profile to blockchain:', response.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error saving personal profile to blockchain:', error);
+            });
+    };
+
     return (
         <div className={`min-h-screen ${gradients.background}`}>
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-4">
-                        <h1 className="text-2xl font-bold text-blue-300">Personal Discovery</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-blue-300">Personal Discovery</h1>
+                            {blockchainLoading && (
+                                <div className="flex items-center gap-2 text-purple-300 text-sm">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-300"></div>
+                                    <span>Loading blockchain data...</span>
+                                </div>
+                            )}
+                        </div>
                         <div className="flex gap-2">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={fillBlockchainData}
+                                disabled={blockchainLoading}
+                                className="bg-purple-900/20 hover:bg-purple-800/30 text-purple-300 border-purple-400 text-xs"
+                            >
+                                {blockchainLoading ? '⏳' : '🔗'} Load
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={checkCompleteAndRedirect}
+                                disabled={blockchainLoading}
+                                className="bg-emerald-900/20 hover:bg-emerald-800/30 text-emerald-300 border-emerald-400 text-xs"
+                            >
+                                {blockchainLoading ? '⏳' : '🏠'} Auto
+                            </Button>
                             <Button
                                 variant="secondary"
                                 size="sm"
                                 onClick={fillTestDataOnly}
                                 className="bg-blue-900/20 hover:bg-blue-800/30 text-blue-300 border-blue-400 text-xs"
                             >
-                                🧪 Fill Data
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={fillTestData}
-                                className="bg-green-900/20 hover:bg-green-800/30 text-green-300 border-green-400 text-xs"
-                            >
-                                ⚡ Complete
+                                🧪 Test
                             </Button>
                         </div>
                     </div>

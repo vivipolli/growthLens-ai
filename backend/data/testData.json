@@ -1,0 +1,34 @@
+{
+  "test-user": {
+    "userProfile": {
+      "name": "Test User",
+      "age": 30,
+      "location": "São Paulo, Brazil",
+      "primary_motivation": "Financial freedom"
+    },
+    "businessData": {
+      "industry": "Digital Marketing",
+      "age_range": "26-35 years old",
+      "gender": "Mixed gender",
+      "income_level": "Middle class ($50k-$80k/year)"
+    },
+    "aiInsights": [],
+    "missionCompletions": []
+  },
+  "Maria Silva": {
+    "userProfile": {
+      "name": "Maria Silva",
+      "age": 28,
+      "location": "Rio de Janeiro, Brazil",
+      "primary_motivation": "Business growth"
+    },
+    "businessData": {
+      "industry": "Digital Marketing",
+      "age_range": "26-35 years old",
+      "gender": "Mixed gender",
+      "income_level": "Middle class ($50k-$80k/year)"
+    },
+    "aiInsights": [],
+    "missionCompletions": []
+  }
+}

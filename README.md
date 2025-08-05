@@ -16,13 +16,19 @@ GrowthLens AI is a complete solution that uses **Hedera Consensus Service (HCS)*
   - `ai_insight`: AI-generated insights
   - `mission_completion`: Completed missions and goals
   - `daily_missions`: Daily missions
-  - `weekly_goals`: Weekly goals
+  
   - `business_observations`: Business observations
 
 ### **Mirror Node API**
 - **Historical Query**: Retrieval of historical data from blockchain
 - **Message Reconstruction**: Intelligent system to reconstruct fragmented messages
 - **Integrity Validation**: Verification of stored data
+
+### **🔄 Smart Data Processing**
+- **Automatic Recovery**: Reconstructs incomplete or fragmented blockchain messages
+- **Data Continuity**: Ensures your coaching history is always complete, even from partial data
+- **Intelligent Parsing**: Understands and organizes your business information from any format
+- **Seamless Experience**: You never lose progress, even if data gets split during blockchain storage
 
 ## 🤖 **AI Integration**
 
@@ -136,6 +142,12 @@ OPENROUTER_API_KEY=sk-or-v1-your-key-here
 - **Personal Discovery**: Profile and motivations
 - **Business Journey**: Company data
 - **Secure Storage**: All data on blockchain
+
+### **🔄 Resilient Data Processing**
+- **Never Lose Progress**: Automatically recovers and reconstructs your data from the blockchain
+- **Smart Organization**: Intelligently processes and organizes your business information
+- **Reliable History**: Maintains complete coaching history even from incomplete blockchain messages
+- **Background Magic**: All data processing happens seamlessly without interrupting your experience
 
 ## 🧪 **Blockchain Testing**
 

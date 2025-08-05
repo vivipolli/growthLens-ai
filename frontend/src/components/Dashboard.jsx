@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
 import { useDailyMissions } from '../hooks/useDailyMissions'
 import { useBlockchainData } from '../hooks/useBlockchainData'
+import { useUser } from '@clerk/clerk-react'
 import {
     Card,
     Button,
@@ -19,14 +20,30 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
     const [showProfileMenu, setShowProfileMenu] = useState(false)
     const { gradients } = useTheme()
     const navigate = useNavigate()
+    const { user } = useUser()
 
-    // Add blockchain data integration
-    const userId = personalData?.name || 'anonymous'
+    // Use only Clerk user ID - no fallback needed
+    const userId = user?.id;
     const { userData: blockchainData, loading: blockchainLoading } = useBlockchainData(userId)
+
+    // Clean localStorage when user changes
+    useEffect(() => {
+        if (user?.id) {
+            const lastUserId = localStorage.getItem('lastLoggedInUserId');
+
+            if (lastUserId && lastUserId !== user.id) {
+                console.log(`🔄 New user logged in: ${user.id} (was: ${lastUserId})`);
+                console.log('🔄 User changed, data will be loaded from blockchain');
+            }
+
+            // Save current user ID
+            localStorage.setItem('lastLoggedInUserId', user.id);
+        }
+    }, [user?.id]);
 
     const {
         dailyMissions: missions,
-        weeklyGoals,
+
         aiInsights,
         error,
         lastGenerated,
@@ -44,7 +61,7 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
         insightsLoading,
         // Individual refresh functions
         generateDailyMissions,
-        generateWeeklyGoals,
+
         generateBusinessObservations
     } = useDailyMissions()
 
@@ -237,64 +254,7 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                             </div>
                         </Card>
 
-                        {/* Weekly Goals */}
-                        <Card>
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900">Weekly Goals</h2>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => {
-                                        console.log('🖱️ Weekly goals refresh button clicked');
-                                        generateWeeklyGoals();
-                                    }}
-                                    disabled={goalsLoading}
-                                >
-                                    {goalsLoading ? '🔄' : '📈'} {goalsLoading ? 'Generating...' : 'Refresh'}
-                                </Button>
-                            </div>
-                            <div className="space-y-6">
-                                {goalsLoading ? (
-                                    <GoalsLoadingSkeleton />
-                                ) : (!weeklyGoals || weeklyGoals.length === 0) ? (
-                                    <GoalsEmptyState onGenerate={generateWeeklyGoals} />
-                                ) : (
-                                    weeklyGoals.map((goal) => (
-                                        <div key={goal.id} className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <h3 className="font-semibold text-gray-900">{goal.title}</h3>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="text-sm text-gray-500">
-                                                        {goal.progress}/{goal.target} {goal.unit}
-                                                    </span>
-                                                    {goal.priority && (
-                                                        <span className={`text-xs px-2 py-1 rounded-full ${goal.priority === 'high' ? 'bg-red-100 text-red-600' :
-                                                            goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                                                                'bg-blue-100 text-blue-600'
-                                                            }`}>
-                                                            {goal.priority}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {goal.description && (
-                                                <p className="text-sm text-gray-600">{goal.description}</p>
-                                            )}
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all"
-                                                    style={{ width: `${Math.min((goal.progress / goal.target) * 100, 100)}%` }}
-                                                ></div>
-                                            </div>
-                                            <div className="flex justify-between text-xs text-gray-500">
-                                                <span>{goal.progress} {goal.unit}</span>
-                                                <span>{goal.target} {goal.unit}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </Card>
+
                     </div>
 
                     {/* Right Column - AI Mentor & Insights */}

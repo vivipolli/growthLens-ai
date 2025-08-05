@@ -62,14 +62,30 @@ export class BusinessCoachingService {
   }
 
   async generateBusinessInsights(request: BusinessInsightRequest): Promise<BusinessInsightResponse> {
+    console.log('🔄 BusinessCoachingService.generateBusinessInsights: Starting...');
+    
     try {
+      // Use persistent user ID from Clerk or generate from user profile
+      const userId = this.getPersistentUserId(request.userProfile);
+      console.log(`🆔 Using persistent user ID: ${userId}`);
+      
+      const userProfile = request.userProfile;
+      const insightType = request.insightType;
+      
+      console.log(`📝 Processing insights for user: ${userId}`);
+      console.log(`🎯 Insight type: ${insightType}`);
+      console.log(`👤 User profile present: ${!!userProfile}`);
+      
+      if (!userProfile || !insightType) {
+        throw new Error('userProfile and insightType are required');
+      }
+
       if (!this.aiLLM) {
         console.log('⚠️  BusinessCoachingService: AI service not available - returning fallback insights');
-        return this.generateFallbackInsights(request.insightType);
+        return this.generateFallbackInsights(insightType);
       }
 
       // 🔄 PASSO 1: Buscar histórico de insights da blockchain
-      const userId = request.userProfile.personal?.name || 'unknown';
       const historicalData = await this.getUserHistoricalData(userId);
       
       console.log(`📊 BusinessCoachingService: Retrieved ${historicalData.aiInsights.length} historical insights for ${userId}`);
@@ -286,79 +302,7 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             resources: []
           });
         }
-      } else if (insightType === 'weekly_goals') {
-        // Simple parser for weekly goals (same as daily_missions)
-        const lines = agentOutput.split('\n');
-        let currentInsight = null;
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          
-          // Look for goal patterns - multiple formats
-          if ((line.includes('Goal') && line.match(/\d+:/)) || 
-              (line.match(/^\d+\.\s*\*\*/)) || 
-              (line.match(/^\d+\.\s+[A-Z]/))) {
-            
-            // Start of a new goal
-            if (currentInsight && currentInsight.title && currentInsight.content) {
-                insights.push({
-                  id: uuidv4(),
-                  type: 'strategy',
-                title: currentInsight.title,
-                content: currentInsight.content,
-                priority: currentInsight.priority,
-                category: currentInsight.category,
-                action: currentInsight.title,
-                  impact: 'Progress towards goals',
-                  confidence: 85,
-                  reasoning: 'AI-generated based on your profile',
-                timeline: 'This week',
-                  resources: []
-                });
-              }
-            
-            // Extract title from multiple formats
-            let title = '';
-            if (line.includes('Goal')) {
-              title = line.replace(/.*?Goal \d+:\s*/, '').trim();
-            } else if (line.match(/^\d+\.\s*\*\*/)) {
-              title = line.replace(/^\d+\.\s*\*\*(.*?)\*\*/, '$1').trim();
-            } else if (line.match(/^\d+\.\s+[A-Z]/)) {
-              title = line.replace(/^\d+\.\s+/, '').trim();
-            }
-            currentInsight = {
-              title: title,
-              content: '',
-              priority: (insights.length === 0 ? 'high' : insights.length === 1 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
-              category: this.mapInsightTypeToCategory(insightType)
-            };
-          } else if (currentInsight && line && !line.startsWith('Why') && !line.startsWith('Action') && !line.startsWith('What to do')) {
-            // Add content to current goal
-            if (currentInsight.content) {
-              currentInsight.content += ' ' + line;
-            } else {
-              currentInsight.content = line;
-            }
-          }
-        }
-        
-        // Add the last goal if it exists
-        if (currentInsight && currentInsight.title && currentInsight.content) {
-                             insights.push({
-                 id: uuidv4(),
-                 type: 'strategy',
-            title: currentInsight.title,
-            content: currentInsight.content,
-            priority: currentInsight.priority,
-            category: currentInsight.category,
-            action: currentInsight.title,
-                 impact: 'Progress towards goals',
-                 confidence: 85,
-                 reasoning: 'AI-generated based on your profile',
-            timeline: 'This week',
-                 resources: []
-               });
-            }
+
       } else if (insightType === 'ai_insights' || insightType === 'content_strategy') {
         // Simple parser for AI insights (same as daily_missions)
         const lines = agentOutput.split('\n');
@@ -545,7 +489,7 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
   private mapInsightTypeToCategory(insightType: string): BusinessInsight['category'] {
     const mapping: Record<string, BusinessInsight['category']> = {
       daily_missions: 'strategy',
-      weekly_goals: 'strategy',
+  
       ai_insights: 'strategy',
       content_strategy: 'content',
       audience_growth: 'audience',
@@ -569,7 +513,7 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
 
 User message: "${message}"
 
-IMPORTANT: If this is a request to generate daily missions, weekly goals, or personalized insights, respond with a valid JSON array only, no additional text or markdown. The JSON should match the exact structure requested.
+IMPORTANT: If this is a request to generate daily missions or personalized insights, respond with a valid JSON array only, no additional text or markdown. The JSON should match the exact structure requested.
 
 For daily missions, respond with:
 [
@@ -586,20 +530,6 @@ For daily missions, respond with:
   }
 ]
 
-For weekly goals, respond with:
-[
-  {
-    "id": 1,
-    "title": "Goal title",
-    "progress": 0,
-    "target": 100,
-    "unit": "measurement unit",
-    "status": "in-progress",
-    "description": "Why this goal matters",
-    "timeline": "This week",
-    "priority": "high/medium/low"
-  }
-]
 
 For personalized insights, respond with:
 [
@@ -751,19 +681,35 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
   }
 
   // 🔄 MÉTODO ATUALIZADO: Salvar perfil do usuário na blockchain
-  async saveUserProfileToBlockchain(userProfile: UserProfile): Promise<string | null> {
+  async saveUserProfileToBlockchain(userProfile: UserProfile): Promise<boolean> {
     try {
-      const userId = userProfile.personal?.name || 'unknown';
-      console.log(`🔐 BusinessCoachingService: Saving user profile to blockchain for ${userId}...`);
+      console.log('🔄 BusinessCoachingService.saveUserProfileToBlockchain: Starting...');
+      
+      // Use persistent user ID or generate from profile
+      let userId: string;
+      try {
+        userId = this.getPersistentUserId(userProfile);
+      } catch (error) {
+        // If no clerkId, generate from profile data
+        userId = this.generateUserIdFromProfile(userProfile);
+      }
+      console.log(`🆔 Using user ID: ${userId}`);
+      
+      console.log(`📝 Saving user profile for: ${userId}`);
+      console.log(`👤 Profile data present: ${!!userProfile}`);
+      
+      if (!userProfile) {
+        throw new Error('User profile is required');
+      }
       
       const txId = await this.hederaTopicService.saveUserProfile(userId, userProfile);
       
       console.log(`✅ BusinessCoachingService: User profile saved to blockchain. TX ID: ${txId}`);
-      return txId;
+      return true;
       
     } catch (error) {
       console.error('❌ BusinessCoachingService: Error saving user profile to blockchain:', error);
-      return null;
+      return false;
     }
   }
 
@@ -772,7 +718,11 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     try {
       console.log(`🔐 BusinessCoachingService: Saving business data to blockchain for ${userId}...`);
       
-      const txId = await this.hederaTopicService.saveBusinessData(userId, businessData);
+      // Use the clerkId from businessData if available, otherwise use userId
+      const clerkId = businessData.clerkId || userId;
+      console.log(`🆔 Using clerkId: ${clerkId}`);
+      
+      const txId = await this.hederaTopicService.saveBusinessData(clerkId, businessData);
       
       console.log(`✅ BusinessCoachingService: Business data saved to blockchain. TX ID: ${txId}`);
       return txId;
@@ -860,7 +810,8 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
         userProfile: blockchainData?.userProfile || null,
         businessData: blockchainData?.businessData || null,
         aiInsights: normalizedInsights,
-        missionCompletions: blockchainData?.missionCompletions || []
+        missionCompletions: blockchainData?.missionCompletions || [],
+        allMessages: blockchainData?.allMessages || []
       };
       
       if (combinedData.aiInsights.length > 0 || combinedData.userProfile || combinedData.businessData) {
@@ -927,5 +878,38 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
       console.error('❌ BusinessCoachingService: Error getting topic info:', error);
       return null;
     }
+  }
+
+  private getPersistentUserId(userProfile: UserProfile): string {
+    // Use Clerk user ID if available
+    if (userProfile && typeof userProfile === 'object' && 'clerkId' in userProfile) {
+      return (userProfile as any).clerkId;
+    }
+    
+    // If no Clerk ID, throw error - we require Clerk authentication
+    throw new Error('Clerk user ID is required for blockchain operations');
+  }
+
+  private generateUserIdFromProfile(userProfile: UserProfile): string {
+    // Generate a unique ID from profile data
+    const profileString = JSON.stringify(userProfile);
+    const timestamp = Date.now().toString();
+    const hash = this.hashString(profileString + timestamp);
+    
+    // Create a readable user ID
+    const name = userProfile.personal?.name || 'user';
+    const cleanName = name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    
+    return `${cleanName}_${hash}`;
+  }
+
+  private hashString(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
   }
 } 

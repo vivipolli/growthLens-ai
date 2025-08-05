@@ -20,8 +20,7 @@ export class BusinessController {
       // Determine insight type based on the request path
       if (req.path.includes('daily-missions')) {
         request.insightType = 'daily_missions';
-      } else if (req.path.includes('weekly-goals')) {
-        request.insightType = 'weekly_goals';
+      
       } else if (req.path.includes('business-observations')) {
         request.insightType = 'business_observations';
       }
@@ -231,8 +230,14 @@ export class BusinessController {
         });
       }
 
+      // Add clerkId to profileData for the service
+      const profileDataWithClerkId = {
+        ...profileData,
+        clerkId: userId
+      };
+
       console.log(`🔄 [${requestId}] Saving user profile to blockchain for user: ${userId}`);
-      const txId = await this.businessCoachingService.saveUserProfileToBlockchain(profileData);
+      const txId = await this.businessCoachingService.saveUserProfileToBlockchain(profileDataWithClerkId);
       
       if (txId) {
         console.log(`✅ [${requestId}] User profile saved to blockchain. TX ID: ${txId}`);
@@ -273,8 +278,14 @@ export class BusinessController {
         });
       }
 
+      // Add clerkId to businessData for the service
+      const businessDataWithClerkId = {
+        ...businessData,
+        clerkId: userId
+      };
+
       console.log(`🔄 [${requestId}] Saving business data to blockchain for user: ${userId}`);
-      const txId = await this.businessCoachingService.saveBusinessDataToBlockchain(businessData, userId);
+      const txId = await this.businessCoachingService.saveBusinessDataToBlockchain(businessDataWithClerkId, userId);
       
       if (txId) {
         console.log(`✅ [${requestId}] Business data saved to blockchain. TX ID: ${txId}`);
@@ -357,17 +368,23 @@ export class BusinessController {
         });
       }
 
-      console.log(`🔄 [${requestId}] Reading user data from blockchain for user: ${userId}`);
-      const userData = await this.businessCoachingService.getUserDataFromBlockchain(userId);
+      // Decode URL encoding if present
+      const decodedUserId = decodeURIComponent(userId);
+      console.log(`🔄 [${requestId}] Reading user data from blockchain for user: ${decodedUserId}`);
+      
+      const userData = await this.businessCoachingService.getUserDataFromBlockchain(decodedUserId);
       
       if (userData) {
         console.log(`✅ [${requestId}] User data retrieved from blockchain successfully`);
+        console.log(`🔍 [${requestId}] userData keys: ${Object.keys(userData)}`);
+        console.log(`🔍 [${requestId}] userData.allMessages length: ${userData.allMessages?.length || 'undefined'}`);
         res.json({
           success: true,
-          data: userData
+          data: userData,
+          userId: decodedUserId
         });
       } else {
-        console.log(`ℹ️  [${requestId}] No data found for user ${userId} - this is normal for new users`);
+        console.log(`ℹ️  [${requestId}] No data found for user ${decodedUserId} - this is normal for new users`);
         res.json({
           success: true,
           data: {
@@ -376,6 +393,7 @@ export class BusinessController {
             aiInsights: [],
             missionCompletions: []
           },
+          userId: decodedUserId,
           message: 'No data found for this user yet. This is normal for new users.'
         });
       }

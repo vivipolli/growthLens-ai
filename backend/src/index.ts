@@ -29,6 +29,7 @@ async function startServer() {
       'http://localhost:5173',
       'http://127.0.0.1:5173', 
       'http://localhost:5174',
+      'https://growth-lens-ai-5kmx.vercel.app',
       process.env.FRONTEND_URL,
       process.env.FRONTEND_URL_2,
       process.env.FRONTEND_URL_3

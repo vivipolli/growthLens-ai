@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { apiCall } from '../utils/api';
 import Card from './Card';
 import Button from './Button';
 import ChatParser from '../utils/chatParser';
@@ -49,8 +50,7 @@ const ChatPage = () => {
 
     const checkChatStatus = async () => {
         try {
-            const response = await fetch('/api/chat/status');
-            const status = await response.json();
+            const status = await apiCall('/api/chat/status');
             setChatStatus(status);
         } catch (error) {
             console.error('Failed to check chat status:', error);
@@ -86,11 +86,8 @@ const ChatPage = () => {
         addUserMessage(message);
 
         try {
-            const response = await fetch('/api/chat/send', {
+            const response = await apiCall('/api/chat/send', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({
                     message: message,
                     userProfile: userProfile,

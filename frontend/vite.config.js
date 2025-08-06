@@ -33,6 +33,8 @@ export default defineConfig({
     host: true
   },
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version)
-  }
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL)
+  },
+  envPrefix: 'VITE_'
 })

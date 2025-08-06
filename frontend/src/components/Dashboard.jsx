@@ -154,6 +154,13 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                         >
                             📊 See My Progress
                         </Button>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => navigate('/chat')}
+                        >
+                            💬 AI Business Coach
+                        </Button>
                         <span className="text-sm text-gray-600">
                             Track your achievements and goals
                         </span>
@@ -161,10 +168,9 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                 </div>
 
                 {/* Main Content */}
-                <div className="grid gap-8">
-                    {/* Left Column - Missions & Goals */}
-                    <div className="lg:col-span-2 space-y-8">
-                        {/* Daily Missions */}
+                <div className="space-y-8">
+                    {/* Daily Missions */}
+                    <div className="lg:col-span-2">
                         {missionsLoading ? (
                             <Card>
                                 <MissionLoadingSkeleton />
@@ -184,66 +190,61 @@ const Dashboard = ({ personalData, businessData, onBackToJourney, onEditPersonal
                                 <MissionEmptyState onGenerate={generateDailyMissions} />
                             </Card>
                         )}
-
-
                     </div>
 
-                    {/* Right Column - AI Mentor & Insights */}
-                    <div className="space-y-8">
-                        {/* AI Insights */}
-                        <Card>
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900">Business Observations</h2>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() => {
-                                            console.log('🖱️ AI insights refresh button clicked');
-                                            generateBusinessObservations();
-                                        }}
-                                        disabled={insightsLoading}
-                                    >
-                                        {insightsLoading ? '🔄' : '💡'} {insightsLoading ? 'Generating...' : 'Refresh'}
-                                    </Button>
-                                    {lastGenerated && (
-                                        <span className="text-xs text-gray-500">
-                                            Updated {new Date(lastGenerated).toLocaleTimeString()}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                {insightsLoading ? (
-                                    <InsightsLoadingSkeleton />
-                                ) : (!aiInsights || aiInsights.length === 0) ? (
-                                    <InsightsEmptyState onGenerate={generateBusinessObservations} />
-                                ) : (
-                                    aiInsights.map((insight) => (
-                                        <div
-                                            key={insight.id}
-                                            className={`p-4 rounded-lg border-l-4 ${getPriorityColor(insight.priority)}`}
-                                        >
-                                            <div className="flex items-start space-x-3">
-                                                <span className="text-lg">
-                                                    {getInsightIcon(insight.type)}
-                                                </span>
-                                                <div className="flex-1">
-                                                    <h3 className="font-semibold text-gray-900">{insight.title}</h3>
-                                                    <p className="text-sm text-gray-700 mt-1">{insight.content}</p>
-                                                    {insight.category && (
-                                                        <span className="inline-block mt-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                                            {insight.category}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                    {/* Business Insights - Full Width */}
+                    <Card>
+                        <div className="flex items-center justify-between mb-6 w-full">
+                            <h2 className="text-xl font-bold text-gray-900">Business Insights</h2>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => {
+                                        console.log('🖱️ AI insights refresh button clicked');
+                                        generateBusinessObservations();
+                                    }}
+                                    disabled={insightsLoading}
+                                >
+                                    {insightsLoading ? '🔄' : '💡'} {insightsLoading ? 'Generating...' : 'Refresh'}
+                                </Button>
+                                {lastGenerated && (
+                                    <span className="text-xs text-gray-500">
+                                        Updated {new Date(lastGenerated).toLocaleTimeString()}
+                                    </span>
                                 )}
                             </div>
-                        </Card>
-                    </div>
+                        </div>
+                        <div className="space-y-4">
+                            {insightsLoading ? (
+                                <InsightsLoadingSkeleton />
+                            ) : (!aiInsights || aiInsights.length === 0) ? (
+                                <InsightsEmptyState onGenerate={generateBusinessObservations} />
+                            ) : (
+                                aiInsights.map((insight) => (
+                                    <div
+                                        key={insight.id}
+                                        className={`p-4 rounded-lg border-l-4 ${getPriorityColor(insight.priority)}`}
+                                    >
+                                        <div className="flex items-start space-x-3">
+                                            <span className="text-lg">
+                                                {getInsightIcon(insight.type)}
+                                            </span>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-gray-900">{insight.title}</h3>
+                                                <p className="text-sm text-gray-700 mt-1">{insight.content}</p>
+                                                {insight.category && (
+                                                    <span className="inline-block mt-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                                        {insight.category}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </Card>
                 </div>
             </div>
 

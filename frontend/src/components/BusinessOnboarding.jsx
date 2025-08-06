@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import { useBlockchainOnboarding } from '../hooks/useBlockchainOnboarding'
-import { Card, Button, AIMentor } from './index'
+import { Card, Button, AIMentor, BlockchainNotification } from './index'
 import { useNavigate } from 'react-router-dom'
 import { businessCoachingService } from '../services/businessCoachingService'
 import { useUser } from '@clerk/clerk-react'
@@ -9,6 +9,15 @@ import { useUser } from '@clerk/clerk-react'
 const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isEditMode = false }) => {
     const [currentStep, setCurrentStep] = useState(0)
     const [completedSteps, setCompletedSteps] = useState([])
+    const [blockchainNotification, setBlockchainNotification] = useState({
+        isVisible: false,
+        transactionId: null,
+        hashscanUrl: null
+    })
+
+    const handleContinueToDashboard = () => {
+        navigate('/', { replace: true });
+    }
     const [answers, setAnswers] = useState(() => {
         // Always try to load from localStorage first
         try {
@@ -111,28 +120,7 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
             }
         }
     }
-
-    // Verificar dados completos e redirecionar
-    const checkCompleteAndRedirect = async () => {
-        if (blockchainLoading) {
-            console.log('⏳ Blockchain request already in progress, skipping...')
-            return
-        }
-
-        try {
-            const success = await checkAndRedirectIfComplete()
-            if (!success) {
-                alert('Dados incompletos no blockchain. Use o botão "🔗 Load" para preencher o formulário.')
-            }
-        } catch (error) {
-            console.error('❌ Error checking complete data:', error)
-            if (error.message.includes('Too many requests')) {
-                alert('Muitas requisições. Aguarde alguns segundos e tente novamente.')
-            }
-        }
-    }
-
-    // Verificar se há novos dados do blockchain no localStorage após carregamento inicial
+    // Check for new blockchain data in localStorage after initial loading
     useEffect(() => {
         const checkForNewLocalData = () => {
             try {
@@ -178,18 +166,39 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                 .then(response => {
                     if (response.success) {
                         console.log('✅ Business data saved to blockchain:', response)
+
+                        // Show blockchain notification
                         if (response.transactionId) {
                             console.log(`🔗 HashScan URL: ${response.hashscanUrl}`)
+                            setBlockchainNotification({
+                                isVisible: true,
+                                transactionId: response.transactionId,
+                                hashscanUrl: response.hashscanUrl
+                            });
+
+                            // Navigate after a longer delay to let user interact
+                            setTimeout(() => {
+                                navigate('/', { replace: true });
+                            }, 8000); // 8 seconds delay
+                        } else {
+                            // Navigate immediately if no transaction ID
+                            navigate('/', { replace: true });
                         }
-                        // Navigate to dashboard after business onboarding is complete
+                    } else {
+                        console.error('❌ Failed to save business data to blockchain:', response.error);
+                        // Navigate anyway
                         navigate('/', { replace: true });
                     }
                 })
                 .catch(error => {
                     console.error('❌ Failed to save business data to blockchain:', error)
+                    // Navigate anyway
+                    navigate('/', { replace: true });
                 })
         } catch (error) {
             console.error('❌ Error saving to blockchain:', error)
+            // Navigate anyway
+            navigate('/', { replace: true });
         }
     }
 
@@ -837,24 +846,17 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                                 size="sm"
                                 onClick={fillBlockchainData}
                                 disabled={blockchainLoading}
-                                className="bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300 text-xs"
+                                className="bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300 text-xs relative group"
+                                title="Loads data saved on the blockchain. Use to recover previously saved information."
                             >
                                 {blockchainLoading ? '⏳' : '🔗'} Load
                             </Button>
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                onClick={checkCompleteAndRedirect}
-                                disabled={blockchainLoading}
-                                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border-emerald-300 text-xs"
-                            >
-                                {blockchainLoading ? '⏳' : '🏠'} Auto
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                size="sm"
                                 onClick={fillTestDataOnly}
-                                className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300 text-xs"
+                                className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300 text-xs relative group"
+                                title="Fills the form with test data for demonstration and development purposes."
                             >
                                 🧪 Test
                             </Button>
@@ -958,6 +960,16 @@ const BusinessOnboarding = ({ onComplete, personalData, initialAnswers = {}, isE
                     </div>
                 </div>
             </div>
+
+            {/* Blockchain Notification */}
+            <BlockchainNotification
+                isVisible={blockchainNotification.isVisible}
+                transactionId={blockchainNotification.transactionId}
+                hashscanUrl={blockchainNotification.hashscanUrl}
+                title="Business Data Saved to Blockchain"
+                onContinue={handleContinueToDashboard}
+                onClose={() => setBlockchainNotification(prev => ({ ...prev, isVisible: false }))}
+            />
         </div>
     )
 }

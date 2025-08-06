@@ -54,9 +54,9 @@ Be encouraging but realistic. Focus on scalable digital strategies and build upo
 export const generateInsightTypePrompt = (insightType: string): string => {
   const prompts: Record<string, string> = {
     daily_missions: `
-Generate exactly 5 DAILY MISSIONS for TODAY that are actionable, quick tasks (15-60 minutes each).
+Generate exactly 4 DAILY MISSIONS for TODAY that are actionable, quick tasks (15-60 minutes each).
 
-CRITICAL: Respond ONLY with exactly 5 missions in this exact format:
+CRITICAL: Respond ONLY with exactly 4 missions in this exact format:
 
 1. **Mission Title** (e.g., "Create Instagram Story", "Research Competitors", "Update LinkedIn Profile")
    Description: Specific, actionable task for today. Be concrete and clear about what to do.
@@ -82,20 +82,13 @@ CRITICAL: Respond ONLY with exactly 5 missions in this exact format:
    Priority: high/medium/low
    Category: content/social/analytics/strategy/growth/networking
 
-5. **Mission Title**
-   Description: Specific, actionable task for today.
-   Time: 15-60 minutes
-   Priority: high/medium/low
-   Category: content/social/analytics/strategy/growth/networking
-
 Examples of good missions:
 - "Post Instagram story about your morning routine"
 - "Research 3 competitors' pricing strategies"
 - "Update LinkedIn profile with recent achievements"
 - "Create 3 content ideas for next week"
-- "Engage with 5 posts from your target audience"
 
-IMPORTANT: Do NOT include any introductory text, explanations, or summaries. Start directly with "1. **Mission Title**" and end after the 5th mission.
+IMPORTANT: Do NOT include any introductory text, explanations, or summaries. Start directly with "1. **Mission Title**" and end after the 4th mission.
 `,
 
     ai_insights: `

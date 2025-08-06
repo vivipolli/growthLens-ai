@@ -9,53 +9,32 @@ const ProgressPage = () => {
     const { userProfile, loading: profileLoading } = useUserProfile();
     const { dailyMissions, missionCompletions, loading: missionsLoading } = useDailyMissions();
 
-    const [selectedPeriod, setSelectedPeriod] = useState('week'); // 'week', 'month', 'all'
-    const [completionStats, setCompletionStats] = useState({
-        dailyCompleted: 0,
-        dailyTotal: 0,
-        weeklyCompleted: 0,
-        weeklyTotal: 0,
-        completionRate: 0
-    });
+    const [selectedPeriod, setSelectedPeriod] = useState('all'); // 'week', 'month', 'all'
+    const [completedMissions, setCompletedMissions] = useState([]);
 
-    // Calculate completion statistics
+    // Filter completed missions based on selected period
     useEffect(() => {
-        if (dailyMissions && missionCompletions) {
-            const dailyCompleted = missionCompletions.filter(m => m.type === 'daily_missions').length;
+        if (missionCompletions && missionCompletions.length > 0) {
+            const now = new Date();
+            const filteredCompletions = missionCompletions.filter(completion => {
+                const completionDate = new Date(completion.completedAt);
 
-            const dailyTotal = dailyMissions.length;
-            const totalCompleted = dailyCompleted;
-            const totalMissions = dailyTotal;
-            const completionRate = totalMissions > 0 ? Math.round((totalCompleted / totalMissions) * 100) : 0;
-
-            setCompletionStats({
-                dailyCompleted,
-                dailyTotal,
-                completionRate
+                switch (selectedPeriod) {
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        return completionDate >= weekAgo;
+                    case 'month':
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        return completionDate >= monthAgo;
+                    case 'all':
+                    default:
+                        return true;
+                }
             });
+
+            setCompletedMissions(filteredCompletions);
         }
-    }, [dailyMissions, missionCompletions]);
-
-    // Get user goals from profile
-    const getUserGoals = () => {
-        if (!userProfile?.business?.goals) return [];
-        return Array.isArray(userProfile.business.goals)
-            ? userProfile.business.goals
-            : [userProfile.business.goals];
-    };
-
-    // Get business challenges
-    const getBusinessChallenges = () => {
-        if (!userProfile?.business?.challenges) return [];
-        return Array.isArray(userProfile.business.challenges)
-            ? userProfile.business.challenges
-            : [userProfile.business.challenges];
-    };
-
-    // Calculate progress percentage
-    const getProgressPercentage = (completed, total) => {
-        return total > 0 ? Math.round((completed / total) * 100) : 0;
-    };
+    }, [missionCompletions, selectedPeriod]);
 
     // Get completion streak
     const getCompletionStreak = () => {
@@ -95,8 +74,6 @@ const ProgressPage = () => {
         );
     }
 
-    const userGoals = getUserGoals();
-    const businessChallenges = getBusinessChallenges();
     const completionStreak = getCompletionStreak();
 
     return (
@@ -138,143 +115,132 @@ const ProgressPage = () => {
                     </div>
                 </div>
 
-                {/* Main Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {/* Completion Rate */}
+                {/* Summary Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* Total Completed Missions */}
                     <Card>
                         <div className="text-center">
-                            <div className="text-3xl font-bold text-purple-600 mb-2">
-                                {completionStats.completionRate}%
+                            <div className="text-3xl font-bold text-green-600 mb-2">
+                                {completedMissions.length}
                             </div>
-                            <div className="text-sm text-gray-400">Completion Rate</div>
-                            <div className="mt-2">
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                        className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${completionStats.completionRate}%` }}
-                                    ></div>
-                                </div>
-                            </div>
+                            <div className="text-sm text-gray-400">Completed Missions</div>
                         </div>
                     </Card>
 
-                    {/* Daily Missions */}
-                    <Card>
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-blue-600 mb-2">
-                                {completionStats.dailyCompleted}/{completionStats.dailyTotal}
-                            </div>
-                            <div className="text-sm text-gray-400">Daily Missions</div>
-                            <div className="mt-2">
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${getProgressPercentage(completionStats.dailyCompleted, completionStats.dailyTotal)}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-
-
-                    {/* Streak */}
+                    {/* Completion Streak */}
                     <Card>
                         <div className="text-center">
                             <div className="text-3xl font-bold text-orange-600 mb-2">
-                                {completionStreak}
+                                {getCompletionStreak()}
                             </div>
-                            <div className="text-sm text-gray-400">Consecutive Days</div>
+                            <div className="text-sm text-gray-400">Day Streak</div>
                             <div className="mt-2">
                                 <div className="flex justify-center space-x-1">
-                                    {[...Array(Math.min(completionStreak, 7))].map((_, i) => (
+                                    {[...Array(Math.min(getCompletionStreak(), 7))].map((_, i) => (
                                         <div key={i} className="w-2 h-2 bg-orange-600 rounded-full"></div>
                                     ))}
                                 </div>
                             </div>
                         </div>
                     </Card>
+
+                    {/* Period Filter */}
+                    <Card>
+                        <div className="text-center">
+                            <div className="text-sm text-gray-400 mb-2">Showing</div>
+                            <div className="flex justify-center space-x-1">
+                                {[
+                                    { key: 'week', label: 'Week' },
+                                    { key: 'month', label: 'Month' },
+                                    { key: 'all', label: 'All' }
+                                ].map((period) => (
+                                    <Button
+                                        key={period.key}
+                                        variant={selectedPeriod === period.key ? 'primary' : 'secondary'}
+                                        size="xs"
+                                        onClick={() => setSelectedPeriod(period.key)}
+                                        className="text-xs"
+                                    >
+                                        {period.label}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    </Card>
                 </div>
 
-                {/* User Goals Section */}
-                {userGoals.length > 0 && (
+                {/* Completed Missions List */}
+                {completedMissions.length > 0 ? (
                     <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-blue-300 neon-text mb-4">Your Business Goals</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {userGoals.map((goal, index) => (
-                                <Card key={index}>
-                                    <div className="flex items-start space-x-3">
-                                        <div className="flex-shrink-0">
-                                            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                                                <span className="text-purple-600 font-semibold">🎯</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-medium text-gray-900">{goal}</h3>
-                                            <p className="text-sm text-gray-400 mt-1">Goal in progress</p>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Business Challenges Section */}
-                {businessChallenges.length > 0 && (
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-blue-300 neon-text mb-4">Identified Challenges</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {businessChallenges.map((challenge, index) => (
-                                <Card key={index}>
-                                    <div className="flex items-start space-x-3">
-                                        <div className="flex-shrink-0">
-                                            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                                                <span className="text-yellow-600 font-semibold">⚡</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-medium text-gray-900">{challenge}</h3>
-                                            <p className="text-sm text-gray-400 mt-1">Focus on daily missions</p>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Recent Completions */}
-                {missionCompletions && missionCompletions.length > 0 && (
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-blue-300 neon-text mb-4">Recent Achievements</h2>
+                        <h2 className="text-2xl font-bold text-blue-300 neon-text mb-4">Completed Daily Missions</h2>
                         <div className="space-y-4">
-                            {missionCompletions
+                            {completedMissions
                                 .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
-                                .slice(0, 5)
                                 .map((completion, index) => (
                                     <Card key={index}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center space-x-3">
                                                 <div className="flex-shrink-0">
-                                                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                                        <span className="text-green-600 font-semibold">✅</span>
+                                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                                        <span className="text-green-600 text-lg">✅</span>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <h3 className="font-medium text-gray-900">{completion.title}</h3>
-                                                    <p className="text-sm text-gray-400">
-                                                        Daily Mission
+                                                <div className="flex-1">
+                                                    <h3 className="font-medium text-gray-900">{completion.title || completion.missionTitle || 'Daily Mission'}</h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        {completion.description || completion.missionDescription || 'Daily mission completed'}
                                                     </p>
+                                                    <div className="flex items-center space-x-4 mt-1">
+                                                        <span className="text-xs text-gray-400">
+                                                            {completion.category || 'General'}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400">
+                                                            {completion.estimatedTime || '15-60 min'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="text-sm text-gray-500">
-                                                {new Date(completion.completedAt).toLocaleDateString('pt-BR')}
+                                            <div className="text-right">
+                                                <div className="text-sm text-gray-500">
+                                                    {new Date(completion.completedAt).toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </div>
+                                                <div className="text-xs text-gray-400">
+                                                    {new Date(completion.completedAt).toLocaleTimeString('en-US', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
                                     </Card>
                                 ))}
                         </div>
+                    </div>
+                ) : (
+                    <div className="mb-8">
+                        <Card>
+                            <div className="text-center py-8">
+                                <div className="text-4xl mb-4">🎯</div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Completed Missions Yet</h3>
+                                <p className="text-gray-500 mb-4">
+                                    {selectedPeriod === 'week'
+                                        ? "Complete your daily missions this week to see your progress here."
+                                        : selectedPeriod === 'month'
+                                            ? "Complete your daily missions this month to see your progress here."
+                                            : "Complete your daily missions to see your progress here."}
+                                </p>
+                                <Button
+                                    variant="primary"
+                                    onClick={() => navigate('/')}
+                                >
+                                    Go to Dashboard
+                                </Button>
+                            </div>
+                        </Card>
                     </div>
                 )}
 
@@ -283,24 +249,24 @@ const ProgressPage = () => {
                     <div className="text-center">
                         <h2 className="text-2xl font-bold mb-2">Keep it up! 🚀</h2>
                         <p className="text-blue-100 mb-4">
-                            {completionStats.completionRate >= 80
-                                ? "You're on the right track! Your dedication is generating incredible results."
-                                : completionStats.completionRate >= 50
-                                    ? "Good progress! Keep focused and continue executing your daily missions."
-                                    : "Each completed mission is a step towards your success. Let's go!"}
+                            {completedMissions.length >= 10
+                                ? "You're on fire! Your consistency is creating amazing results."
+                                : completedMissions.length >= 5
+                                    ? "Great progress! Keep focused and continue with your daily missions."
+                                    : "Every completed mission brings you closer to your goals. Let's go!"}
                         </p>
                         <div className="flex justify-center space-x-4">
                             <div className="text-center">
-                                <div className="text-2xl font-bold">{completionStats.dailyCompleted}</div>
+                                <div className="text-2xl font-bold">{completedMissions.length}</div>
                                 <div className="text-sm text-blue-200">Completed Missions</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-2xl font-bold">{completionStreak}</div>
-                                <div className="text-sm text-blue-200">Active Days</div>
+                                <div className="text-2xl font-bold">{getCompletionStreak()}</div>
+                                <div className="text-sm text-blue-200">Day Streak</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-2xl font-bold">{userGoals.length}</div>
-                                <div className="text-sm text-blue-200">Goals Defined</div>
+                                <div className="text-2xl font-bold">{selectedPeriod}</div>
+                                <div className="text-sm text-blue-200">Period</div>
                             </div>
                         </div>
                     </div>

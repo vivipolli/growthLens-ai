@@ -125,7 +125,7 @@ const DailyMissions = ({
             <div className="space-y-4">
                 {loading ? (
                     <div className="animate-pulse space-y-4">
-                        {[1, 2, 3].map(i => (
+                        {[1, 2, 3, 4].map(i => (
                             <div key={i} className="p-4 bg-gray-100 rounded-xl">
                                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                                 <div className="h-3 bg-gray-200 rounded w-1/2"></div>
@@ -237,14 +237,14 @@ const DailyMissions = ({
             </div>
 
             {/* Daily Streak Info */}
-            <div className="mt-6 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border border-orange-200">
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex items-center justify-between">
                     <div>
                         <h3 className="font-semibold text-gray-900">🔥 Daily Streak</h3>
                         <p className="text-sm text-gray-600">Keep the momentum going!</p>
                     </div>
                     <div className="text-right">
-                        <div className="text-2xl font-bold text-orange-600">7 days</div>
+                        <div className="text-2xl font-bold text-white">7 days</div>
                         <div className="text-sm text-gray-500">current streak</div>
                     </div>
                 </div>

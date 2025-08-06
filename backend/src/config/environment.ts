@@ -7,7 +7,8 @@ export const config = {
   hedera: {
     accountId: process.env.HEDERA_ACCOUNT_ID || '',
     privateKey: process.env.HEDERA_PRIVATE_KEY || '',
-    network: process.env.HEDERA_NETWORK || 'testnet'
+    network: process.env.HEDERA_NETWORK || 'testnet',
+    topicId: process.env.HEDERA_TOPIC_ID || ''
   },
   openai: {
     // Prioritize OpenRouter over OpenAI

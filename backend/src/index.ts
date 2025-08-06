@@ -6,6 +6,9 @@ import { config, validateEnvironment } from './config/environment';
 import { agentRoutes, agentService } from './routes/agentRoutes';
 import { businessRoutes, businessCoachingService } from './routes/businessRoutes';
 import { authRoutes } from './routes/authRoutes';
+import { createChatRoutes } from './routes/chatRoutes';
+import { ChatController } from './controllers/chatController';
+import { HederaChatService } from './services/hederaChatService';
 
 async function startServer() {
   console.log('🚀 Starting Hedera AI Business Coaching Platform...');
@@ -80,7 +83,12 @@ async function startServer() {
     await businessCoachingService.initialize();
     console.log('✅ Business Coaching Service initialized successfully');
     
-    console.log('🎯 Hedera AI Agent and Business Coaching services initialized successfully');
+    console.log('🔄 Initializing Hedera Chat Service...');
+    const hederaChatService = new HederaChatService();
+    await hederaChatService.initialize();
+    console.log('✅ Hedera Chat Service initialized successfully');
+    
+    console.log('🎯 Hedera AI Agent, Business Coaching, and Chat services initialized successfully');
 
     console.log('🛣️ Setting up API routes...');
     app.use('/api/agent', agentRoutes);
@@ -91,6 +99,10 @@ async function startServer() {
 
     app.use('/api/auth', authRoutes);
     console.log('✅ Auth routes configured at /api/auth');
+    
+    const chatController = new ChatController(hederaChatService, businessCoachingService);
+    app.use('/api/chat', createChatRoutes(chatController));
+    console.log('✅ Chat routes configured at /api/chat');
 
     console.log('🏠 Setting up home route...');
     app.get('/', (req, res) => {

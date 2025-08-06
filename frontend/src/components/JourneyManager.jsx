@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import { Card, Button } from './index'
 import Dashboard from './Dashboard'
+import ChatPage from './ChatPage'
 import { useNavigate } from 'react-router-dom'
 
 const JourneyManager = () => {

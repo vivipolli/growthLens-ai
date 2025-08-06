@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import { useBlockchainOnboarding } from '../hooks/useBlockchainOnboarding'
-import { Card, Button, AIMentor } from './index'
+import { Card, Button, AIMentor, BlockchainNotification } from './index'
 import { useNavigate } from 'react-router-dom'
 import { businessCoachingService } from '../services/businessCoachingService'
 import { useUser } from '@clerk/clerk-react'
 
 const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = false }) => {
     const [currentStep, setCurrentStep] = useState(0)
+    const [blockchainNotification, setBlockchainNotification] = useState({
+        isVisible: false,
+        transactionId: null,
+        hashscanUrl: null
+    })
+
+    const handleContinueToBusinessOnboarding = () => {
+        navigate('/onboarding/business', { replace: true });
+    }
     const [answers, setAnswers] = useState(() => {
         // Always try to load from localStorage first
         try {
@@ -49,14 +58,6 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
         fear: "My biggest fear is that I might not be good enough or that I'll invest time and energy into something that won't work out. I'm also scared of financial instability during the transition period."
     }
 
-    const fillTestData = () => {
-        setAnswers(testData)
-        saveAnswers(testData)
-        // Go to last step to see the complete form
-        setCurrentStep(personalSteps.length - 1)
-    }
-
-    // Carregar dados do blockchain
     const fillBlockchainData = async () => {
         if (blockchainLoading) {
             console.log('⏳ Blockchain request already in progress, skipping...')
@@ -77,32 +78,12 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
         } catch (error) {
             console.error('❌ Error loading blockchain data:', error)
             if (error.message.includes('Too many requests')) {
-                alert('Muitas requisições. Aguarde alguns segundos e tente novamente.')
+                alert('Too many requests. Wait a few seconds and try again.')
             }
         }
     }
 
-    // Verificar dados completos e redirecionar
-    const checkCompleteAndRedirect = async () => {
-        if (blockchainLoading) {
-            console.log('⏳ Blockchain request already in progress, skipping...')
-            return
-        }
-
-        try {
-            const success = await checkAndRedirectIfComplete()
-            if (!success) {
-                alert('Dados incompletos no blockchain. Use o botão "🔗 Blockchain" para preencher o formulário.')
-            }
-        } catch (error) {
-            console.error('❌ Error checking complete data:', error)
-            if (error.message.includes('Too many requests')) {
-                alert('Muitas requisições. Aguarde alguns segundos e tente novamente.')
-            }
-        }
-    }
-
-    // Verificar se há novos dados do blockchain no localStorage após carregamento inicial
+    // Check for new blockchain data in localStorage after initial loading
     useEffect(() => {
         const checkForNewLocalData = () => {
             try {
@@ -449,14 +430,33 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
             .then(response => {
                 if (response.success) {
                     console.log('✅ Personal profile saved to blockchain:', response);
-                    // Navigate to business onboarding after personal is complete
-                    navigate('/onboarding/business', { replace: true });
+
+                    // Show blockchain notification
+                    if (response.transactionId) {
+                        setBlockchainNotification({
+                            isVisible: true,
+                            transactionId: response.transactionId,
+                            hashscanUrl: response.hashscanUrl
+                        });
+
+                        // Navigate after a longer delay to let user interact
+                        setTimeout(() => {
+                            navigate('/onboarding/business', { replace: true });
+                        }, 8000); // 8 seconds delay
+                    } else {
+                        // Navigate immediately if no transaction ID
+                        navigate('/onboarding/business', { replace: true });
+                    }
                 } else {
                     console.error('❌ Failed to save personal profile to blockchain:', response.error);
+                    // Navigate anyway
+                    navigate('/onboarding/business', { replace: true });
                 }
             })
             .catch(error => {
                 console.error('❌ Error saving personal profile to blockchain:', error);
+                // Navigate anyway
+                navigate('/onboarding/business', { replace: true });
             });
     };
 
@@ -481,24 +481,17 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                                 size="sm"
                                 onClick={fillBlockchainData}
                                 disabled={blockchainLoading}
-                                className="bg-purple-900/20 hover:bg-purple-800/30 text-purple-300 border-purple-400 text-xs"
+                                className="bg-purple-900/20 hover:bg-purple-800/30 text-purple-300 border-purple-400 text-xs relative group"
+                                title="Loads data saved on the blockchain. Use to recover previously saved information."
                             >
                                 {blockchainLoading ? '⏳' : '🔗'} Load
                             </Button>
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                onClick={checkCompleteAndRedirect}
-                                disabled={blockchainLoading}
-                                className="bg-emerald-900/20 hover:bg-emerald-800/30 text-emerald-300 border-emerald-400 text-xs"
-                            >
-                                {blockchainLoading ? '⏳' : '🏠'} Auto
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                size="sm"
                                 onClick={fillTestDataOnly}
-                                className="bg-blue-900/20 hover:bg-blue-800/30 text-blue-300 border-blue-400 text-xs"
+                                className="bg-blue-900/20 hover:bg-blue-800/30 text-blue-300 border-blue-400 text-xs relative group"
+                                title="Fills the form with test data for demonstration and development purposes."
                             >
                                 🧪 Test
                             </Button>
@@ -602,6 +595,16 @@ const PersonalOnboarding = ({ onComplete, initialAnswers = {}, isEditMode = fals
                     </div>
                 </div>
             </div>
+
+            {/* Blockchain Notification */}
+            <BlockchainNotification
+                isVisible={blockchainNotification.isVisible}
+                transactionId={blockchainNotification.transactionId}
+                hashscanUrl={blockchainNotification.hashscanUrl}
+                title="Personal Data Saved to Blockchain"
+                onContinue={handleContinueToBusinessOnboarding}
+                onClose={() => setBlockchainNotification(prev => ({ ...prev, isVisible: false }))}
+            />
         </div>
     )
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { ClerkProvider, useAuth, SignedIn, SignedOut, SignIn } from '@clerk/clerk-react'
 import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom'
-import { JourneyManager, PersonalOnboarding, BusinessOnboarding, Header, ProgressPage } from './components'
+import { JourneyManager, PersonalOnboarding, BusinessOnboarding, Header, ProgressPage, ChatPage } from './components'
 import { useUserChange } from './hooks/useUserChange'
 import { useOnboardingStatus } from './hooks/useOnboardingStatus'
 import { useBlockchainOnboarding } from './hooks/useBlockchainOnboarding'
@@ -172,6 +172,23 @@ function AppContent() {
                   <div>
                     <Header />
                     <ProgressPage />
+                  </div>
+                </SignedIn>
+                <SignedOut>
+                  <Navigate to="/sign-in" replace />
+                </SignedOut>
+              </>
+            }
+          />
+
+          <Route
+            path="/chat"
+            element={
+              <>
+                <SignedIn>
+                  <div>
+                    <Header />
+                    <ChatPage />
                   </div>
                 </SignedIn>
                 <SignedOut>

@@ -65,11 +65,15 @@ const Header = ({
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                         <div
-                            className={`w-10 h-10 ${gradients.primary} rounded-lg flex items-center justify-center cursor-pointer select-none`}
+                            className="w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer select-none overflow-hidden"
                             onClick={handleLogoClick}
                             title={isOnboardingComplete() ? 'Go to Dashboard' : undefined}
                         >
-                            <span className="text-white text-xl font-bold">GL</span>
+                            <img
+                                src="/logo.png"
+                                alt="GrowthLens AI Logo"
+                                className="w-full h-full object-cover rounded-lg"
+                            />
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-blue-300 cursor-pointer select-none" onClick={handleLogoClick} title={isOnboardingComplete() ? 'Go to Dashboard' : undefined}>GrowthLens AI</h1>

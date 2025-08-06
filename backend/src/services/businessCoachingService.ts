@@ -183,7 +183,7 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
   }
 
   private parseAgentResponse(agentOutput: string, insightType: string): BusinessInsightResponse {
-    const insights: BusinessInsight[] = [];
+    let insights: BusinessInsight[] = [];
 
     try {
       if (insightType === 'daily_missions') {
@@ -259,6 +259,9 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
             resources: []
           });
         }
+        
+        // Limit to exactly 4 missions
+        insights = insights.slice(0, 4);
 
       } else if (insightType === 'ai_insights' || insightType === 'content_strategy') {
         const lines = agentOutput.split('\n');
@@ -451,13 +454,39 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
         return this.generateFallbackChatResponse(message, userProfile);
       }
 
+      // 🔥 NOVO: Gerar userId baseado no perfil (sem depender do Clerk)
+      let userId: string;
+      try {
+        userId = this.getPersistentUserId(userProfile);
+      } catch (error) {
+        // Se não tiver clerkId, gerar um ID baseado no perfil
+        userId = this.generateUserIdFromProfile(userProfile);
+      }
+      
+      const historicalData = await this.getUserHistoricalData(userId);
+      
+      // 🔥 NOVO: Construir contexto histórico
+      const historicalContext = this.buildChatHistoricalContext(historicalData);
+      
+      // 🔥 NOVO: Analisar progresso do usuário
+      const progressData = await this.getUserProgressData(userProfile, historicalData);
+      
       const contextPrompt = createContextualPrompt(userProfile, 'general_coaching');
       
       const fullPrompt = `${contextPrompt}
 
+${historicalContext}
+
+User Progress:
+- Completed Missions: ${progressData.completedMissions || 0}
+- Completion Rate: ${progressData.completionRate || 0}%
+- Active Categories: ${progressData.activeMissionCategories || 'Starting journey'}
+- Recent Activity: ${progressData.recentActivityAreas || 'No recent activity'}
+- Progress Trend: ${progressData.progressTrends || 'Building momentum'}
+
 User message: "${message}"
 
-IMPORTANT: If this is a request to generate daily missions or personalized insights, respond with a valid JSON array only, no additional text or markdown. The JSON should match the exact structure requested.
+IMPORTANT: Use the historical context and user progress to provide personalized advice. Consider their previous insights, completed missions, and progress patterns when responding.
 
 For daily missions, respond with:
 [
@@ -488,7 +517,7 @@ For personalized insights, respond with:
   }
 ]
 
-Otherwise, respond as their personal business mentor. Be supportive, practical, and provide actionable advice based on their specific context and goals.`;
+Otherwise, respond as their personal business mentor. Be supportive, practical, and provide actionable advice based on their specific context, goals, and historical progress.`;
       
       const response = await this.aiLLM.invoke(fullPrompt);
       
@@ -501,7 +530,13 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
   }
 
   private generateFallbackChatResponse(message: string, userProfile: UserProfile): string {
-    const fallbackResponse = `I understand you're working on your ${userProfile.business.industry} business. While our AI features are being configured, I'd recommend focusing on connecting with your target audience (${userProfile.business.target_audience?.age_range || 'your ideal customers'}) and addressing their main pain point: ${userProfile.business.target_audience?.pain_points || 'their key challenges'}. This aligns with your goal of ${userProfile.personal.success_definition || 'building a successful business'}. We'll have enhanced AI coaching features available soon!`;
+    // 🔥 NOVO: Adicionar verificações de segurança para evitar erros
+    const industry = userProfile?.business?.industry || 'business';
+    const ageRange = userProfile?.business?.target_audience?.age_range || 'your ideal customers';
+    const painPoints = userProfile?.business?.target_audience?.pain_points || 'their key challenges';
+    const successDefinition = userProfile?.personal?.success_definition || 'building a successful business';
+    
+    const fallbackResponse = `I understand you're working on your ${industry} business. While our AI features are being configured, I'd recommend focusing on connecting with your target audience (${ageRange}) and addressing their main pain point: ${painPoints}. This aligns with your goal of ${successDefinition}. We'll have enhanced AI coaching features available soon!`;
     return fallbackResponse;
   }
 
@@ -551,7 +586,7 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
       }
 
       const completedMissions = historicalData.missionCompletions || [];
-      const totalMissions = completedMissions.length + 5; // Assume some pending missions
+      const totalMissions = completedMissions.length + 4; // Assume 4 pending missions
       const completionRate = totalMissions > 0 ? Math.round((completedMissions.length / totalMissions) * 100) : 0;
 
       // Extract mission categories from completed missions
@@ -637,6 +672,55 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     }
     
     context += '\n--- END HISTORICAL CONTEXT ---\n';
+    return context;
+  }
+
+  // 🔥 NOVO: Função específica para construir contexto de chat
+  private buildChatHistoricalContext(historicalData: any): string {
+    const { aiInsights, missionCompletions, allMessages } = historicalData;
+    
+    let context = '\n--- CHAT HISTORICAL CONTEXT ---\n';
+    
+    // Insights anteriores relevantes
+    if (aiInsights.length > 0) {
+      const recentInsights = aiInsights.slice(-3);
+      context += '\nPrevious AI Insights:\n';
+      recentInsights.forEach((insight: any, index: number) => {
+        const title = insight.title || 'Untitled';
+        const content = insight.content || '';
+        const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+        context += `${index + 1}. ${title}: ${preview}\n`;
+      });
+    }
+    
+    // Missões recentes
+    if (missionCompletions.length > 0) {
+      const recentMissions = missionCompletions.slice(-3);
+      context += '\nRecent Completed Missions:\n';
+      recentMissions.forEach((mission: any, index: number) => {
+        const missionTitle = mission.title || mission.missionId || 'Unknown Mission';
+        context += `${index + 1}. ${missionTitle}\n`;
+      });
+    }
+    
+    // Conversas anteriores (se disponível)
+    if (allMessages && allMessages.length > 0) {
+      const chatMessages = allMessages.filter((msg: any) => 
+        msg.type === 'user_message' || msg.type === 'system_message'
+      ).slice(-5);
+      
+      if (chatMessages.length > 0) {
+        context += '\nRecent Chat History:\n';
+        chatMessages.forEach((msg: any, index: number) => {
+          const role = msg.type === 'user_message' ? 'User' : 'AI';
+          const content = msg.message || msg.content || '';
+          const preview = content.length > 50 ? content.substring(0, 50) + '...' : content;
+          context += `${index + 1}. ${role}: ${preview}\n`;
+        });
+      }
+    }
+    
+    context += '\n--- END CHAT HISTORICAL CONTEXT ---\n';
     return context;
   }
 

@@ -2,6 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom styles for chat */
+.prose {
+    @apply text-gray-900;
+}
+
+.prose strong {
+    @apply font-semibold text-gray-900;
+}
+
+.prose em {
+    @apply italic;
+}
+
+.prose code {
+    @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.prose ul {
+    @apply list-disc list-inside space-y-1;
+}
+
+.prose ol {
+    @apply list-decimal list-inside space-y-1;
+}
+
+.prose li {
+    @apply text-gray-800;
+}
+
+.prose h1,
+.prose h2,
+.prose h3 {
+    @apply font-semibold text-gray-900 mt-4 mb-2;
+}
+
+.prose p {
+    @apply mb-2 text-gray-800;
+}
+
+.prose h1 {
+    @apply text-xl;
+}
+
+.prose h2 {
+    @apply text-lg;
+}
+
+.prose h3 {
+    @apply text-base;
+}
+
+.prose p {
+    @apply mb-2;
+}
+
+.prose p:last-child {
+    @apply mb-0;
+}
+
 /* Dark theme global styles */
 body {
     background: linear-gradient(135deg, #0a0a0a 0%, #001a33 50%, #000000 100%);

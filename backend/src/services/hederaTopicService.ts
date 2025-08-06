@@ -95,12 +95,14 @@ export class HederaTopicService {
       userTopics[userId] = topicData;
       this.saveUserTopics(userTopics);
 
-      await this.submitMessage(topicId, {
+      const initialMessage: TopicMessage = {
         type: 'user_profile',
         timestamp: new Date().toISOString(),
         data: userData,
         userId
-      });
+      };
+      
+      await this.submitMessage(topicId, initialMessage);
 
       return topicData;
 
@@ -662,7 +664,7 @@ export class HederaTopicService {
         const chunk = chunks[i];
         console.log(`📤 Submitting chunk ${i + 1}/${chunks.length} to topic ${topicData.topicId}`);
         
-        const message = {
+        const message: TopicMessage = {
           type: 'user_profile',
           timestamp: new Date().toISOString(),
           data: chunk,
@@ -711,7 +713,7 @@ export class HederaTopicService {
         const chunk = chunks[i];
         console.log(`📤 Submitting chunk ${i + 1}/${chunks.length} to topic ${topicData.topicId}`);
         
-        const message = {
+        const message: TopicMessage = {
           type: 'business_data',
           timestamp: new Date().toISOString(),
           data: chunk,
@@ -738,23 +740,27 @@ export class HederaTopicService {
     const topicData = await this.getOrCreateUserTopic(userId, insightData);
     const messageType = insightData.insightType || 'ai_insight';
     
-    return await this.submitMessage(topicData.topicId, {
-      type: messageType,
+    const message: TopicMessage = {
+      type: messageType as TopicMessage['type'],
       timestamp: new Date().toISOString(),
       data: insightData,
       userId
-    });
+    };
+    
+    return await this.submitMessage(topicData.topicId, message);
   }
 
   async saveMissionCompletion(userId: string, missionData: any): Promise<string> {
     const topicData = await this.getOrCreateUserTopic(userId, missionData);
     
-    return await this.submitMessage(topicData.topicId, {
+    const message: TopicMessage = {
       type: 'mission_completion',
       timestamp: new Date().toISOString(),
       data: missionData,
       userId
-    });
+    };
+    
+    return await this.submitMessage(topicData.topicId, message);
   }
 
   private getUserTopics(): Record<string, UserTopicData> {

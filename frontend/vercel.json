@@ -6,6 +6,10 @@
   "devCommand": "yarn dev",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
@@ -41,5 +45,14 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "VITE_API_URL": "https://growth-lens-ai-5kmx.vercel.app"
+  }
 }

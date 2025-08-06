@@ -20,13 +20,13 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    proxy: {
+    proxy: process.env.NODE_ENV === 'development' ? {
       '/api': {
-        target: process.env.VITE_API_URL,
+        target: process.env.VITE_API_URL || 'http://localhost:3001',
         changeOrigin: true,
         secure: false
       }
-    }
+    } : undefined
   },
   preview: {
     port: 4173,

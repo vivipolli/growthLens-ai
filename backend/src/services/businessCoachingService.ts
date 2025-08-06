@@ -701,11 +701,26 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
   async saveBusinessDataToBlockchain(businessData: any, userId: string): Promise<string | null> {
     try {
       const clerkId = businessData.clerkId || userId;
+      
+      if (!businessData) {
+        throw new Error('Business data is required');
+      }
+      
+      console.log(`💾 Saving complete business data to blockchain for user: ${clerkId}`);
+      console.log(`📊 Business data:`, JSON.stringify(businessData, null, 2));
+      
       const txId = await this.hederaTopicService.saveBusinessData(clerkId, businessData);
-      return txId;
+      
+      if (txId) {
+        console.log(`✅ Business data saved to blockchain with transaction ID: ${txId}`);
+        return txId;
+      } else {
+        console.warn('⚠️ No transaction ID returned from Hedera service for business data');
+        return null;
+      }
       
     } catch (error) {
-      console.error('Error saving business data to blockchain:', error);
+      console.error('❌ Error saving business data to blockchain:', error);
       return null;
     }
   }
@@ -821,7 +836,10 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
     const profileString = JSON.stringify(userProfile);
     const timestamp = Date.now().toString();
     const hash = this.hashString(profileString + timestamp);
-    const name = userProfile.personal?.name || 'user';
+    
+    // For personal onboarding data, name is directly in the profile
+    // For business data, it might be in userProfile.personal?.name
+    const name = (userProfile as any).name || userProfile.personal?.name || 'user';
     const cleanName = name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     
     return `${cleanName}_${hash}`;

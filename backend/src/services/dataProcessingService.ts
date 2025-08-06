@@ -669,30 +669,160 @@ export class DataProcessingService {
   }
 
   splitDataIntoChunks(data: any, dataType: 'user_profile' | 'business_data'): any[] {
-    const maxChunkSize = 800;
     const dataString = JSON.stringify(data);
     
-    if (dataString.length <= maxChunkSize) {
+    console.log(`🔧 splitDataIntoChunks called with dataType: ${dataType}`);
+    console.log(`📏 Data string length: ${dataString.length}`);
+    
+    // Calculate metadata overhead for message size validation
+    const testMessage = {
+      type: dataType,
+      timestamp: new Date().toISOString(),
+      data: {},
+      userId: 'user_12345678901234567890',
+      chunkIndex: 0,
+      totalChunks: 1
+    };
+    const metadataOverhead = JSON.stringify(testMessage).length - 2; // -2 for empty data object
+    const totalMessageSize = dataString.length + metadataOverhead;
+    
+    console.log(`📦 Metadata overhead: ${metadataOverhead} chars`);
+    console.log(`📊 Total message size: ${totalMessageSize} chars (limit: 1024 bytes)`);
+    
+    if (totalMessageSize <= 1000) { // Safe margin under 1024 bytes
+      console.log(`✅ Data fits in single chunk, returning as-is`);
       return [data];
     }
     
     const chunks: any[] = [];
     
     if (dataType === 'user_profile') {
-      if (data.personal) {
-        chunks.push({ personal: data.personal });
-      }
-      if (data.business) {
-        const businessChunks = this.splitObjectIntoChunks(data.business, 'business');
-        businessChunks.forEach(chunk => {
-          chunks.push({ business: chunk });
-        });
+      // Check if data has nested structure (legacy format)
+      if (data.personal || data.business) {
+        console.log(`📦 Processing nested user profile structure`);
+        if (data.personal) {
+          chunks.push({ personal: data.personal });
+        }
+        if (data.business) {
+          const businessChunks = this.splitObjectIntoChunks(data.business, 'business');
+          businessChunks.forEach(chunk => {
+            chunks.push({ business: chunk });
+          });
+        }
+      } else {
+        // Handle flat structure from Personal Onboarding
+        console.log(`📦 Processing flat user profile structure (Personal Onboarding)`);
+        const userChunks = this.splitObjectIntoChunks(data, 'user_profile');
+        chunks.push(...userChunks);
       }
     } else if (dataType === 'business_data') {
-      const businessChunks = this.splitObjectIntoChunks(data, 'business_data');
+      console.log(`📦 Processing business data`);
+      // For business data, try to group related fields together
+      const businessChunks = this.splitBusinessDataIntoChunks(data);
       chunks.push(...businessChunks);
     }
     
+    console.log(`📦 Created ${chunks.length} chunks`);
+    return chunks;
+  }
+
+  splitBusinessDataIntoChunks(data: any): any[] {
+    // Hedera message limit is 1024 bytes, leaving space for metadata
+    const maxDataSize = 700; // Conservative size for data portion only
+    const chunks: any[] = [];
+    
+    // Define logical groups for business data
+    const groups = {
+      niche: ['industry', 'age_range', 'gender', 'income_level', 'education_level', 'location'],
+      customer_insights: ['pain_points', 'goals_aspirations'],
+      competitors: ['competitor_profiles', 'engaging_content_aspects', 'visual_communication_style'],
+      brand: ['business_name', 'description', 'target_market', 'unique_value_proposition'],
+      content: ['content_types', 'posting_frequency', 'engagement_strategy'],
+      monetization: ['revenue_streams', 'pricing_strategy', 'sales_funnel']
+    };
+    
+    console.log(`🔧 splitBusinessDataIntoChunks: Grouping business data logically`);
+    console.log(`📏 Max data size per chunk: ${maxDataSize} chars (accounting for metadata)`);
+    
+    // Calculate size with metadata overhead
+    const testMessage = {
+      type: 'business_data',
+      timestamp: new Date().toISOString(),
+      data: {},
+      userId: 'user_12345678901234567890',
+      chunkIndex: 0,
+      totalChunks: 1
+    };
+    const metadataOverhead = JSON.stringify(testMessage).length - 2; // -2 for empty data object
+    console.log(`📦 Metadata overhead: ${metadataOverhead} chars`);
+    
+    // First, try to fit all data in one chunk
+    const dataString = JSON.stringify(data);
+    const totalMessageSize = dataString.length + metadataOverhead;
+    
+    console.log(`📊 Data size: ${dataString.length} chars, Total message: ${totalMessageSize} chars`);
+    
+    if (totalMessageSize <= 1000) { // Safe margin under 1024 bytes
+      console.log(`✅ All business data fits in single chunk`);
+      return [data];
+    }
+    
+    // If too large, group by logical sections
+    const processedKeys = new Set<string>();
+    
+    for (const [groupName, groupKeys] of Object.entries(groups)) {
+      const groupData: any = {};
+      let hasData = false;
+      
+      for (const key of groupKeys) {
+        if (data.hasOwnProperty(key)) {
+          groupData[key] = data[key];
+          processedKeys.add(key);
+          hasData = true;
+        }
+      }
+      
+      if (hasData) {
+        const groupSize = JSON.stringify(groupData).length;
+        const groupMessageSize = groupSize + metadataOverhead;
+        console.log(`📦 Group "${groupName}": ${Object.keys(groupData).length} fields, ${groupSize} chars, total message: ${groupMessageSize} chars`);
+        
+        if (groupMessageSize <= 1000) { // Safe margin under 1024 bytes
+          chunks.push(groupData);
+        } else {
+          // If group is still too large, split it further
+          console.log(`⚠️ Group "${groupName}" too large (${groupMessageSize} chars), splitting further`);
+          const subChunks = this.splitObjectIntoChunks(groupData, groupName);
+          chunks.push(...subChunks);
+        }
+      }
+    }
+    
+    // Handle any remaining fields not in predefined groups
+    const remainingData: any = {};
+    let hasRemaining = false;
+    
+    for (const key of Object.keys(data)) {
+      if (!processedKeys.has(key)) {
+        remainingData[key] = data[key];
+        hasRemaining = true;
+      }
+    }
+    
+    if (hasRemaining) {
+      const remainingSize = JSON.stringify(remainingData).length;
+      const remainingMessageSize = remainingSize + metadataOverhead;
+      console.log(`📦 Remaining fields: ${Object.keys(remainingData).length} fields, ${remainingSize} chars, total message: ${remainingMessageSize} chars`);
+      
+      if (remainingMessageSize <= 1000) { // Safe margin under 1024 bytes
+        chunks.push(remainingData);
+      } else {
+        const subChunks = this.splitObjectIntoChunks(remainingData, 'remaining');
+        chunks.push(...subChunks);
+      }
+    }
+    
+    console.log(`📊 splitBusinessDataIntoChunks created ${chunks.length} logical chunks`);
     return chunks;
   }
 

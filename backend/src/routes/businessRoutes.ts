@@ -4,6 +4,12 @@ import { BusinessCoachingService } from '../services/businessCoachingService';
 
 const router = Router();
 const businessCoachingService = new BusinessCoachingService();
+
+// Initialize the service
+businessCoachingService.initialize().catch(error => {
+  console.error('❌ Failed to initialize BusinessCoachingService:', error);
+});
+
 const businessController = new BusinessController(businessCoachingService);
 
 // Test endpoint to check parser

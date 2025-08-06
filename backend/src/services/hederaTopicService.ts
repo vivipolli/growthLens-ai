@@ -637,45 +637,101 @@ export class HederaTopicService {
   }
 
   async saveUserProfile(userId: string, profileData: any): Promise<string> {
-    const topicData = await this.getOrCreateUserTopic(userId, profileData);
-    const chunks = this.dataProcessor.splitDataIntoChunks(profileData, 'user_profile');
-    const txIds: string[] = [];
-    
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const txId = await this.submitMessage(topicData.topicId, {
-        type: 'user_profile',
-        timestamp: new Date().toISOString(),
-        data: chunk,
-        userId,
-        chunkIndex: i,
-        totalChunks: chunks.length
-      });
-      txIds.push(txId);
+    try {
+      console.log(`🔄 HederaTopicService.saveUserProfile called for userId: ${userId}`);
+      console.log(`🔍 Service initialized: ${this.isInitialized}`);
+      
+      if (!this.isInitialized) {
+        console.error('❌ HederaTopicService not initialized - cannot save to blockchain');
+        throw new Error('HederaTopicService not initialized');
+      }
+      
+      console.log(`📊 Profile data to save:`, JSON.stringify(profileData, null, 2));
+      
+      console.log(`🏗️ Getting or creating user topic...`);
+      const topicData = await this.getOrCreateUserTopic(userId, profileData);
+      console.log(`✅ Topic obtained: ${topicData.topicId}`);
+      
+      console.log(`🔧 Splitting data into chunks...`);
+      const chunks = this.dataProcessor.splitDataIntoChunks(profileData, 'user_profile');
+      console.log(`📦 Created ${chunks.length} chunks`);
+      
+      const txIds: string[] = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        console.log(`📤 Submitting chunk ${i + 1}/${chunks.length} to topic ${topicData.topicId}`);
+        
+        const message = {
+          type: 'user_profile',
+          timestamp: new Date().toISOString(),
+          data: chunk,
+          userId,
+          chunkIndex: i,
+          totalChunks: chunks.length
+        };
+        
+        const txId = await this.submitMessage(topicData.topicId, message);
+        console.log(`✅ Chunk ${i + 1} submitted with txId: ${txId}`);
+        txIds.push(txId);
+      }
+      
+      console.log(`🎉 All chunks submitted successfully. Main txId: ${txIds[0]}`);
+      return txIds[0];
+      
+    } catch (error) {
+      console.error(`❌ Error in saveUserProfile:`, error);
+      throw error;
     }
-    
-    return txIds[0];
   }
 
   async saveBusinessData(userId: string, businessData: any): Promise<string> {
-    const topicData = await this.getOrCreateUserTopic(userId, businessData);
-    const chunks = this.dataProcessor.splitDataIntoChunks(businessData, 'business_data');
-    const txIds: string[] = [];
-    
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const txId = await this.submitMessage(topicData.topicId, {
-        type: 'business_data',
-        timestamp: new Date().toISOString(),
-        data: chunk,
-        userId,
-        chunkIndex: i,
-        totalChunks: chunks.length
-      });
-      txIds.push(txId);
+    try {
+      console.log(`🔄 HederaTopicService.saveBusinessData called for userId: ${userId}`);
+      console.log(`🔍 Service initialized: ${this.isInitialized}`);
+      
+      if (!this.isInitialized) {
+        console.error('❌ HederaTopicService not initialized - cannot save to blockchain');
+        throw new Error('HederaTopicService not initialized');
+      }
+      
+      console.log(`📊 Business data to save:`, JSON.stringify(businessData, null, 2));
+      
+      console.log(`🏗️ Getting or creating user topic...`);
+      const topicData = await this.getOrCreateUserTopic(userId, businessData);
+      console.log(`✅ Topic obtained: ${topicData.topicId}`);
+      
+      console.log(`🔧 Splitting business data into chunks...`);
+      const chunks = this.dataProcessor.splitDataIntoChunks(businessData, 'business_data');
+      console.log(`📦 Created ${chunks.length} chunks`);
+      
+      const txIds: string[] = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        console.log(`📤 Submitting chunk ${i + 1}/${chunks.length} to topic ${topicData.topicId}`);
+        
+        const message = {
+          type: 'business_data',
+          timestamp: new Date().toISOString(),
+          data: chunk,
+          userId,
+          chunkIndex: i,
+          totalChunks: chunks.length
+        };
+        
+        const txId = await this.submitMessage(topicData.topicId, message);
+        console.log(`✅ Chunk ${i + 1} submitted with txId: ${txId}`);
+        txIds.push(txId);
+      }
+      
+      console.log(`🎉 All business chunks submitted successfully. Main txId: ${txIds[0]}`);
+      return txIds[0];
+      
+    } catch (error) {
+      console.error(`❌ Error in saveBusinessData:`, error);
+      throw error;
     }
-    
-    return txIds[0];
   }
 
   async saveAIInsight(userId: string, insightData: any): Promise<string> {

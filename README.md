@@ -8,31 +8,15 @@ GrowthLens AI is a complete solution that uses **Hedera Consensus Service (HCS)*
 
 ## ⛓️ **Hedera Services Used**
 
-### **Hedera Consensus Service (HCS) - Topics**
-- **Immutable Storage**: All user data is stored in HCS topics
-- **Data Types**:
-  - `user_profile`: Personal and professional profile
-  - `business_data`: Business information
-  - `ai_insight`: AI-generated insights
-  - `mission_completion`: Completed missions and goals
-  - `daily_missions`: Daily missions  
-  - `business_observations`: Business observations
-
-### **Mirror Node API**
-- **Historical Query**: Retrieval of historical data from blockchain
-- **Message Reconstruction**: Intelligent system to reconstruct fragmented messages
-- **Integrity Validation**: Verification of stored data
-
-### **🔄 Smart Data Processing**
-- **Automatic Recovery**: Reconstructs incomplete or fragmented blockchain messages
-- **Data Continuity**: Ensures your coaching history is always complete, even from partial data
-- **Intelligent Parsing**: Understands and organizes your business information from any format
-- **Seamless Experience**: You never lose progress, even if data gets split during blockchain storage
+### **Hedera Integration**
+- **HCS Topics**: Using `@hashgraph/sdk` for immutable storage of user profiles, business data, and AI insights through `TopicCreateTransaction` and `TopicMessageSubmitTransaction` (see `HederaChatService`)
+- **Account Management**: Leveraging `hedera-agent-kit` for secure transaction signing and account creation via `AccountCreateTransaction` (see `HederaAuthService`)
+- **Data Retrieval**: Mirror Node integration for querying historical data and message validation
 
 ## 🤖 **AI Integration**
 
 ### **OpenRouter + LangChain**
-- **Models**: GPT-3.5-turbo, Claude-3.5-sonnet
+- **Models**: deepseek/deepseek-r1-distill-llama-70b:free (will be updated in the future)
 - **Historical Context**: AI analyzes complete user history from blockchain
 - **Personalized Insights**: Coaching based on real business data
 - **Continuous Evolution**: AI learns from each stored interaction
@@ -80,13 +64,13 @@ cd hedera-growth
 
 # Backend
 cd backend
-npm install
+yarn install
 cp .env.example .env
 # Configure HEDERA_ACCOUNT_ID, HEDERA_PRIVATE_KEY, OPENROUTER_API_KEY
 
 # Frontend
 cd ../frontend
-npm install
+yarn install
 cp .env.example .env
 # Configure VITE_CLERK_PUBLISHABLE_KEY
 ```
@@ -154,26 +138,6 @@ OPENROUTER_API_KEY=sk-or-v1-your-key-here
 - **Smart Organization**: Intelligently processes and organizes your business information
 - **Reliable History**: Maintains complete coaching history even from incomplete blockchain messages
 - **Background Magic**: All data processing happens seamlessly without interrupting your experience
-
-## 🧪 **Blockchain Testing**
-
-### **Save Data**
-```bash
-# User profile
-curl -X POST http://localhost:3001/api/auth/profile/test/blockchain/store \
-  -H "Content-Type: application/json" \
-  -d '{"personal":{"name":"Test User"},"business":{"industry":"Tech"}}'
-
-# AI insights
-curl -X POST http://localhost:3001/api/business/insights/generate \
-  -H "Content-Type: application/json" \
-  -d '{"userProfile":{"personal":{"name":"Test"}},"insightType":"marketing"}'
-```
-
-### **Verify on Blockchain**
-- **HashScan**: https://hashscan.io/testnet
-- **Mirror Node**: https://testnet.mirrornode.hedera.com/
-
 
 
 ## 🎯 **Hackathon Differentiators**

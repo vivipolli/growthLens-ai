@@ -38,13 +38,40 @@ export class BusinessCoachingService {
     }
 
     try {
+      if (!config.openai.apiKey) {
+        console.warn('⚠️  No API key configured for AI service');
+        return;
+      }
+      
+      console.log('🔧 Initializing AI service...');
+      console.log(`🤖 Model: ${config.openai.model}`);
+      console.log(`🔗 Base URL: ${config.openai.baseURL}`);
+      console.log(`🔑 API Key: ${config.openai.apiKey?.substring(0, 12)}...`);
+      
       this.aiLLM = createInstance({
         modelName: config.openai.model,
         baseURL: config.openai.baseURL,
         apiKey: config.openai.apiKey
       });
+      
+      console.log('✅ AI service initialized successfully');
+      
+      // Test the AI service with a simple prompt
+      try {
+        const testResponse = await this.aiLLM.invoke('Hello, this is a test message.');
+        if (testResponse && testResponse.content) {
+          console.log('✅ AI service test successful');
+        } else {
+          console.warn('⚠️  AI service test failed - response is undefined');
+          this.aiLLM = undefined;
+        }
+      } catch (testError) {
+        console.error('❌ AI service test failed:', testError);
+        this.aiLLM = undefined;
+      }
     } catch (error) {
-      console.error('Failed to initialize AI service:', error);
+      console.error('❌ Failed to initialize AI service:', error);
+      this.aiLLM = undefined;
     }
   }
 
@@ -451,6 +478,7 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
   async getChatResponse(message: string, userProfile: UserProfile, chatHistory: any[] = []): Promise<string> {
     try {
       if (!this.aiLLM) {
+        console.warn('⚠️  AI service not initialized, using fallback response');
         return this.generateFallbackChatResponse(message, userProfile);
       }
 
@@ -521,10 +549,25 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
       
       const response = await this.aiLLM.invoke(fullPrompt);
       
+      if (!response || !response.content) {
+        console.error('AI response is undefined or missing content');
+        return this.generateFallbackChatResponse(message, userProfile);
+      }
+      
       return response.content;
 
     } catch (error) {
       console.error('Chat response error:', error);
+      
+      // Check if it's an API-related error
+      if (error instanceof Error) {
+        if (error.message.includes('API') || error.message.includes('rate limit') || error.message.includes('timeout')) {
+          console.error('❌ AI API error detected:', error.message);
+        } else if (error.message.includes('network') || error.message.includes('connection')) {
+          console.error('❌ Network error detected:', error.message);
+        }
+      }
+      
       return this.generateFallbackChatResponse(message, userProfile);
     }
   }
@@ -937,5 +980,34 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
       hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
+  }
+
+  // Method to check AI service status
+  isAIServiceReady(): boolean {
+    return this.aiLLM !== undefined;
+  }
+
+  // Method to get AI service status info
+  getAIServiceStatus(): { isReady: boolean; error?: string } {
+    if (!this.aiLLM) {
+      return { 
+        isReady: false, 
+        error: 'AI service not initialized. Check API keys and configuration.' 
+      };
+    }
+    return { isReady: true };
+  }
+
+  // Method to reinitialize AI service
+  async reinitializeAIService(): Promise<boolean> {
+    try {
+      console.log('🔄 Reinitializing AI service...');
+      this.aiLLM = undefined;
+      await this.initialize();
+      return this.aiLLM !== undefined;
+    } catch (error) {
+      console.error('❌ Failed to reinitialize AI service:', error);
+      return false;
+    }
   }
 } 

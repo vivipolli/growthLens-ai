@@ -105,4 +105,48 @@ export class ChatController {
             });
         }
     };
+
+    getAIStatus = async (req: Request, res: Response) => {
+        try {
+            const aiStatus = this.businessCoachingService.getAIServiceStatus();
+            const status = {
+                ...aiStatus,
+                timestamp: new Date().toISOString()
+            };
+            
+            res.json(status);
+            
+        } catch (error) {
+            console.error('ChatController.getAIStatus error:', error);
+            res.status(500).json({
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    };
+
+    reinitializeAI = async (req: Request, res: Response) => {
+        try {
+            const success = await this.businessCoachingService.reinitializeAIService();
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'AI service reinitialized successfully',
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to reinitialize AI service',
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+        } catch (error) {
+            console.error('ChatController.reinitializeAI error:', error);
+            res.status(500).json({
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    };
 } 

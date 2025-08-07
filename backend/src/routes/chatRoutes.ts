@@ -13,5 +13,11 @@ export const createChatRoutes = (chatController: ChatController) => {
     // Get chat service status
     router.get('/status', chatController.getChatStatus);
 
+    // Get AI service status
+    router.get('/ai-status', chatController.getAIStatus);
+
+    // Reinitialize AI service
+    router.post('/ai-reinitialize', chatController.reinitializeAI);
+
     return router;
 }; 

@@ -22,6 +22,14 @@ function createInstance(params: any) {
     llmType,
   });
 
+  if (!apiKey) {
+    throw new Error('API key is required for AI service initialization');
+  }
+
+  if (!baseURL) {
+    throw new Error('Base URL is required for AI service initialization');
+  }
+
   let llm;
   switch (llmType) {
     case 'openai':
@@ -34,19 +42,24 @@ function createInstance(params: any) {
       console.log(`🔗 Base URL: ${baseURL}`);
       console.log(`🔑 API Key: ${apiKey?.substring(0, 12)}...`);
       
-      llm = new ChatOpenAI({
-        modelName,
-        apiKey,
-        modalities: ['text'],
-        maxTokens: 2000,
-        temperature: 0.7,
-        timeout: 60000, // 60 seconds timeout
-        configuration: {
-          baseURL,
-        },
-      });
-      
-      console.log(`✅ ChatOpenAI instance created successfully`);
+      try {
+        llm = new ChatOpenAI({
+          modelName,
+          apiKey,
+          modalities: ['text'],
+          maxTokens: 2000,
+          temperature: 0.7,
+          timeout: 60000, // 60 seconds timeout
+          configuration: {
+            baseURL,
+          },
+        });
+        
+        console.log(`✅ ChatOpenAI instance created successfully`);
+      } catch (error) {
+        console.error('❌ Failed to create ChatOpenAI instance:', error);
+        throw new Error(`Failed to create ChatOpenAI instance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
       break;
     default:
       throw new Error(`Unsupported LLM type: ${llmType}`);

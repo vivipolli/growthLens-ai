@@ -86,7 +86,7 @@ const ChatPage = () => {
         addUserMessage(message);
 
         try {
-            const response = await apiCall('/api/chat/send', {
+            const data = await apiCall('/api/chat/send', {
                 method: 'POST',
                 body: JSON.stringify({
                     message: message,
@@ -95,19 +95,19 @@ const ChatPage = () => {
                 })
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.aiResponse) {
-                    addSystemMessage(data.aiResponse);
-                } else {
-                    addSystemMessage("I understand your question. Let me provide some insights based on your business profile...");
-                }
+            console.log('Chat response data:', data);
+            console.log('aiResponse exists:', !!data.aiResponse);
+            console.log('aiResponse content:', data.aiResponse);
+
+            if (data.aiResponse) {
+                addSystemMessage(data.aiResponse);
             } else {
-                addSystemMessage("Sorry, I'm having trouble processing your message right now. Please try again.");
+                console.log('No aiResponse found in data');
+                addSystemMessage("I understand your question. Let me provide some insights based on your business profile...");
             }
         } catch (error) {
             console.error('Failed to send message:', error);
-            addSystemMessage("Sorry, there was an error sending your message. Please try again.");
+            addSystemMessage("Sorry, I'm having trouble processing your message right now. Please try again.");
         } finally {
             setIsLoading(false);
         }

@@ -1,29 +1,29 @@
 export const createContextualPrompt = (userProfile: any, insightType: string, specificQuestion?: string, progressData?: any): string => {
-  const { personal, business } = userProfile;
+  const { personal, business } = userProfile || {};
   
   const contextPrompt = `
 You are an expert business coach and mentor specializing in digital businesses and autonomous professionals.
 
 PERSONAL CONTEXT:
-- Location: ${personal.location || 'Not specified'}
-- Age: ${personal.age || 'Not specified'}
-- Primary motivation: ${personal.primary_motivation || 'Not specified'}
-- Biggest challenge: ${personal.biggest_challenge || 'Not specified'}
-- Success definition: ${personal.success_definition || 'Not specified'}
-- Core values: ${personal.core_values && Array.isArray(personal.core_values) ? personal.core_values.join(', ') : 'Not specified'}
-- Work style: ${personal.work_style || 'Not specified'}
-- Dream lifestyle: ${personal.dream_lifestyle || 'Not specified'}
-- Impact goal: ${personal.impact_goal || 'Not specified'}
-- Main fear: ${personal.fear || 'Not specified'}
+- Location: ${personal?.location || 'Not specified'}
+- Age: ${personal?.age || 'Not specified'}
+- Primary motivation: ${personal?.primary_motivation || 'Not specified'}
+- Biggest challenge: ${personal?.biggest_challenge || 'Not specified'}
+- Success definition: ${personal?.success_definition || 'Not specified'}
+- Core values: ${personal?.core_values && Array.isArray(personal.core_values) ? personal.core_values.join(', ') : 'Not specified'}
+- Work style: ${personal?.work_style || 'Not specified'}
+- Dream lifestyle: ${personal?.dream_lifestyle || 'Not specified'}
+- Impact goal: ${personal?.impact_goal || 'Not specified'}
+- Main fear: ${personal?.fear || 'Not specified'}
 
 BUSINESS CONTEXT:
-- Industry: ${business.industry || 'Not specified'}
-- Target audience: ${business.target_audience?.age_range || 'Not specified'}, ${business.target_audience?.gender || 'Not specified'}, ${business.target_audience?.income_level || 'Not specified'}
-- Customer location: ${business.target_audience?.location || 'Not specified'}
-- Customer pain points: ${business.target_audience?.pain_points || 'Not specified'}
-- Customer goals: ${business.target_audience?.goals_aspirations || 'Not specified'}
-- Main offer: ${business.main_offer || 'Not specified'}
-- Competitive gaps identified: ${business.content_analysis?.competitive_gaps || 'Not analyzed yet'}
+- Industry: ${business?.industry || 'Not specified'}
+- Target audience: ${business?.target_audience?.age_range || 'Not specified'}, ${business?.target_audience?.gender || 'Not specified'}, ${business?.target_audience?.income_level || 'Not specified'}
+- Customer location: ${business?.target_audience?.location || 'Not specified'}
+- Customer pain points: ${business?.target_audience?.pain_points || 'Not specified'}
+- Customer goals: ${business?.target_audience?.goals_aspirations || 'Not specified'}
+- Main offer: ${business?.main_offer || 'Not specified'}
+- Competitive gaps identified: ${business?.content_analysis?.competitive_gaps || 'Not analyzed yet'}
 
 CURRENT PROGRESS CONTEXT:
 ${progressData ? `

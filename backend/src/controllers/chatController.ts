@@ -20,7 +20,9 @@ export class ChatController {
             }
 
             // Send message to Hedera
-            await this.hederaChatService.sendMessage(message, userProfile as UserProfile, userId);
+            if (this.hederaChatService) {
+                await this.hederaChatService.sendMessage(message, userProfile as UserProfile, userId);
+            }
             
             // 🔥 NOVO: Recuperar histórico de chat do Hedera
             const chatHistory = await this.getChatHistoryFromHedera(userId);
@@ -33,7 +35,9 @@ export class ChatController {
             );
             
             // Send AI response to Hedera
-            await this.hederaChatService.sendSystemMessage(aiResponse, userId);
+            if (this.hederaChatService) {
+                await this.hederaChatService.sendSystemMessage(aiResponse, userId);
+            }
             
             res.json({
                 success: true,
@@ -72,7 +76,9 @@ export class ChatController {
                 });
             }
 
-            await this.hederaChatService.sendSystemMessage(message, userId);
+            if (this.hederaChatService) {
+                await this.hederaChatService.sendSystemMessage(message, userId);
+            }
             
             res.json({
                 success: true,
@@ -91,8 +97,8 @@ export class ChatController {
     getChatStatus = async (req: Request, res: Response) => {
         try {
             const status = {
-                isReady: this.hederaChatService.isReady(),
-                topicId: this.hederaChatService.getTopicId(),
+                isReady: this.hederaChatService?.isReady() || false,
+                topicId: this.hederaChatService?.getTopicId() || null,
                 timestamp: new Date().toISOString()
             };
             

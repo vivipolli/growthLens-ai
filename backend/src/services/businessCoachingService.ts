@@ -18,6 +18,7 @@ export class BusinessCoachingService {
   private agent?: HederaConversationalAgent;
   private agentSigner?: ServerSigner;
   private aiLLM?: any;
+  private fallbackLLM?: any;
   private hederaTopicService: HederaTopicService;
 
   constructor() {
@@ -33,45 +34,66 @@ export class BusinessCoachingService {
       config.hedera.network as any
     );
 
-    if (!config.openai.apiKey) {
+    if (!config.ai.apiKey) {
+      console.warn('⚠️  No API key configured for AI service');
       return;
     }
 
     try {
-      if (!config.openai.apiKey) {
-        console.warn('⚠️  No API key configured for AI service');
-        return;
-      }
       
-      console.log('🔧 Initializing AI service...');
-      console.log(`🤖 Model: ${config.openai.model}`);
-      console.log(`🔗 Base URL: ${config.openai.baseURL}`);
-      console.log(`🔑 API Key: ${config.openai.apiKey?.substring(0, 12)}...`);
+      console.log('🔧 Initializing AI service with fallback models...');
+      console.log(`🤖 Primary Model: ${config.ai.model}`);
+      console.log(`🔄 Fallback Model: ${config.ai.fallbackModel}`);
+      console.log(`🔗 Base URL: ${config.ai.baseURL}`);
+      console.log(`🔑 API Key: ${config.ai.apiKey?.substring(0, 12)}...`);
       
+      // Initialize primary model
       this.aiLLM = createInstance({
-        modelName: config.openai.model,
-        baseURL: config.openai.baseURL,
-        apiKey: config.openai.apiKey
+        modelName: config.ai.model,
+        baseURL: config.ai.baseURL,
+        apiKey: config.ai.apiKey
+      });
+      
+      // Initialize fallback model
+      this.fallbackLLM = createInstance({
+        modelName: config.ai.fallbackModel,
+        baseURL: config.ai.baseURL,
+        apiKey: config.ai.apiKey
       });
       
       console.log('✅ AI service initialized successfully');
       
-      // Test the AI service with a simple prompt
+      // Test the primary AI service
       try {
         const testResponse = await this.aiLLM.invoke('Hello, this is a test message.');
         if (testResponse && testResponse.content) {
-          console.log('✅ AI service test successful');
+          console.log('✅ Primary AI service test successful');
         } else {
-          console.warn('⚠️  AI service test failed - response is undefined');
+          console.warn('⚠️  Primary AI service test failed - response is undefined');
           this.aiLLM = undefined;
         }
       } catch (testError) {
-        console.error('❌ AI service test failed:', testError);
+        console.error('❌ Primary AI service test failed:', testError);
         this.aiLLM = undefined;
+      }
+      
+      // Test the fallback AI service
+      try {
+        const testResponse = await this.fallbackLLM.invoke('Hello, this is a test message.');
+        if (testResponse && testResponse.content) {
+          console.log('✅ Fallback AI service test successful');
+        } else {
+          console.warn('⚠️  Fallback AI service test failed - response is undefined');
+          this.fallbackLLM = undefined;
+        }
+      } catch (testError) {
+        console.error('❌ Fallback AI service test failed:', testError);
+        this.fallbackLLM = undefined;
       }
     } catch (error) {
       console.error('❌ Failed to initialize AI service:', error);
       this.aiLLM = undefined;
+      this.fallbackLLM = undefined;
     }
   }
 
@@ -85,7 +107,7 @@ export class BusinessCoachingService {
         throw new Error('userProfile and insightType are required');
       }
 
-      if (!this.aiLLM) {
+      if (!this.aiLLM && !this.fallbackLLM) {
         return this.generateFallbackInsights(insightType);
       }
 
@@ -137,41 +159,94 @@ An encouraging, personalized message that acknowledges their journey and motivat
 Keep the tone professional but warm, like a supportive mentor who believes in their success.
 `;
 
-      const response = await this.aiLLM.invoke(fullPrompt);
-      const parsedResponse = this.parseAgentResponse(response.content, request.insightType);
+      let response;
+      let modelUsed = 'primary';
       
-      if (parsedResponse.insights && parsedResponse.insights.length > 0) {
-        try {
-          await this.saveBusinessInsightsToBlockchain(userId, parsedResponse, request.insightType);
-        } catch (error) {
-          console.error('Failed to save business insights to blockchain:', error);
+      try {
+        // Try primary model first
+        if (this.aiLLM) {
+          console.log('🎯 Using primary model for AI generation');
+          response = await this.aiLLM.invoke(fullPrompt);
+        } else if (this.fallbackLLM) {
+          console.log('🔄 Using fallback model for AI generation');
+          response = await this.fallbackLLM.invoke(fullPrompt);
+          modelUsed = 'fallback';
+        } else {
+          throw new Error('No AI models available');
         }
-      } else {
-        const forcedInsightData = {
-          type: 'business_observation',
-          timestamp: new Date().toISOString(),
-          data: {
-            insightType: request.insightType,
-            insights: response.content ? [{ 
-              id: `forced-${Date.now()}`,
-              title: 'AI Generated Business Observation',
-              content: response.content.substring(0, 200) + '...',
-              priority: 'high',
-              category: 'strategy'
-            }] : [],
-            summary: 'AI generated business insights',
-            nextSteps: ['Review AI recommendations'],
-            personalizedMessage: 'AI generated personalized business content',
-            model: config.openai.model
-          },
-          userId: userId
-        };
         
-        const existingCache = this.recentInsightsCache.get(userId) || [];
-        this.recentInsightsCache.set(userId, [...existingCache, forcedInsightData]);
-      }
+        if (!response || !response.content) {
+          throw new Error('AI response is undefined or missing content');
+        }
+        
+                console.log(`✅ AI generation successful using ${modelUsed} model`);
+        const parsedResponse = this.parseAgentResponse(response.content, request.insightType);
+        
+        if (parsedResponse.insights && parsedResponse.insights.length > 0) {
+          try {
+            await this.saveBusinessInsightsToBlockchain(userId, parsedResponse, request.insightType);
+          } catch (error) {
+            console.error('Failed to save business insights to blockchain:', error);
+          }
+        } else {
+          const forcedInsightData = {
+            type: 'business_observation',
+            timestamp: new Date().toISOString(),
+            data: {
+              insightType: request.insightType,
+              insights: response.content ? [{ 
+                id: `forced-${Date.now()}`,
+                title: 'AI Generated Business Observation',
+                content: response.content.substring(0, 200) + '...',
+                priority: 'high',
+                category: 'strategy'
+              }] : [],
+              summary: 'AI generated business insights',
+              nextSteps: ['Review AI recommendations'],
+              personalizedMessage: 'AI generated personalized business content',
+              model: config.ai.model
+            },
+            userId: userId
+          };
+          
+          const existingCache = this.recentInsightsCache.get(userId) || [];
+          this.recentInsightsCache.set(userId, [...existingCache, forcedInsightData]);
+        }
 
-      return parsedResponse;
+        return parsedResponse;
+        
+      } catch (error) {
+        console.error(`❌ AI generation failed with ${modelUsed} model:`, error);
+        
+        // Try fallback model if primary failed
+        if (modelUsed === 'primary' && this.fallbackLLM) {
+          try {
+            console.log('🔄 Trying fallback model...');
+            response = await this.fallbackLLM.invoke(fullPrompt);
+            
+            if (response && response.content) {
+              console.log('✅ AI generation successful using fallback model');
+              const parsedResponse = this.parseAgentResponse(response.content, request.insightType);
+              
+              if (parsedResponse.insights && parsedResponse.insights.length > 0) {
+                try {
+                  await this.saveBusinessInsightsToBlockchain(userId, parsedResponse, request.insightType);
+                } catch (saveError) {
+                  console.error('Failed to save business insights to blockchain:', saveError);
+                }
+              }
+              
+              return parsedResponse;
+            }
+          } catch (fallbackError) {
+            console.error('❌ Fallback model also failed:', fallbackError);
+          }
+        }
+        
+        // If all models fail, return fallback insights
+        console.log('🔄 Returning fallback insights due to model failures');
+        return this.generateFallbackInsights(request.insightType);
+      }
 
     } catch (error) {
       console.error('Error generating business insights:', error);
@@ -477,7 +552,7 @@ Keep the tone professional but warm, like a supportive mentor who believes in th
 
   async getChatResponse(message: string, userProfile: UserProfile, chatHistory: any[] = []): Promise<string> {
     try {
-      if (!this.aiLLM) {
+      if (!this.aiLLM && !this.fallbackLLM) {
         console.warn('⚠️  AI service not initialized, using fallback response');
         return this.generateFallbackChatResponse(message, userProfile);
       }
@@ -547,14 +622,51 @@ For personalized insights, respond with:
 
 Otherwise, respond as their personal business mentor. Be supportive, practical, and provide actionable advice based on their specific context, goals, and historical progress.`;
       
-      const response = await this.aiLLM.invoke(fullPrompt);
+      let response;
+      let modelUsed = 'primary';
       
-      if (!response || !response.content) {
-        console.error('AI response is undefined or missing content');
+      try {
+        // Try primary model first
+        if (this.aiLLM) {
+          console.log('🎯 Using primary model for chat');
+          response = await this.aiLLM.invoke(fullPrompt);
+        } else if (this.fallbackLLM) {
+          console.log('🔄 Using fallback model for chat');
+          response = await this.fallbackLLM.invoke(fullPrompt);
+          modelUsed = 'fallback';
+        } else {
+          throw new Error('No AI models available');
+        }
+        
+        if (!response || !response.content) {
+          throw new Error('AI response is undefined or missing content');
+        }
+        
+        console.log(`✅ Chat successful using ${modelUsed} model`);
+        return response.content;
+        
+      } catch (error) {
+        console.error(`❌ Chat failed with ${modelUsed} model:`, error);
+        
+        // Try fallback model if primary failed
+        if (modelUsed === 'primary' && this.fallbackLLM) {
+          try {
+            console.log('🔄 Trying fallback model for chat...');
+            response = await this.fallbackLLM.invoke(fullPrompt);
+            
+            if (response && response.content) {
+              console.log('✅ Chat successful using fallback model');
+              return response.content;
+            }
+          } catch (fallbackError) {
+            console.error('❌ Fallback model also failed:', fallbackError);
+          }
+        }
+        
+        // If all models fail, return fallback response
+        console.log('🔄 Returning fallback chat response due to model failures');
         return this.generateFallbackChatResponse(message, userProfile);
       }
-      
-      return response.content;
 
     } catch (error) {
       console.error('Chat response error:', error);
@@ -778,7 +890,7 @@ Otherwise, respond as their personal business mentor. Be supportive, practical, 
           summary: response.summary,
           nextSteps: response.nextSteps,
           personalizedMessage: response.personalized_message,
-          model: config.openai.model
+          model: config.ai.model
         },
         userId: userId
       };

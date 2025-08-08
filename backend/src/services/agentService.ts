@@ -20,26 +20,24 @@ export class AgentService {
       );
 
       // Only initialize AI agent if API key is available
-      if (!config.openai.apiKey) {
-        console.log('💡 Set OPENAI_API_KEY or OPENROUTER_API_KEY to enable AI features');
+      if (!config.ai.apiKey) {
+        console.log('💡 Set OPENROUTER_API_KEY to enable AI features');
         this.isInitialized = true;
         return;
       }
 
-      // Configuração para OpenRouter ou OpenAI
+      // Configuração para OpenRouter
       const agentConfig: any = {
-        openAIApiKey: config.openai.apiKey,
+        openAIApiKey: config.ai.apiKey,
         operationalMode: 'directExecution',
       };
 
-      // Se estiver usando OpenRouter, configurar baseURL customizada
-      if (config.openai.baseURL !== 'https://api.openai.com/v1') {
-        agentConfig.openAIConfiguration = {
-          baseURL: config.openai.baseURL,
-          defaultQuery: { model: config.openai.model }
-        };
-        console.log(`🔗 AgentService usando OpenRouter com modelo: ${config.openai.model}`);
-      }
+      // Configurar OpenRouter
+      agentConfig.openAIConfiguration = {
+        baseURL: config.ai.baseURL,
+        defaultQuery: { model: config.ai.model }
+      };
+      console.log(`🔗 AgentService usando OpenRouter com modelo: ${config.ai.model}`);
 
       this.basicAgent = new HederaConversationalAgent(this.agentSigner, agentConfig);
       await this.basicAgent.initialize();
@@ -96,9 +94,9 @@ export class AgentService {
         throw new Error('Agent signer not initialized');
       }
 
-      if (!config.openai.apiKey) {
+      if (!config.ai.apiKey) {
         return {
-          output: 'AI features are currently disabled. Please configure an OpenAI API key to enable AI assistance.',
+          output: 'AI features are currently disabled. Please configure an OPENROUTER_API_KEY to enable AI assistance.',
           message: 'AI features disabled',
           notes: ['No API key configured'],
           error: undefined
@@ -110,16 +108,14 @@ export class AgentService {
         operationalMode: 'provideBytes',
         userAccountId: request.userAccountId,
         scheduleUserTransactionsInBytesMode: true,
-        openAIApiKey: config.openai.apiKey,
+        openAIApiKey: config.ai.apiKey,
       };
 
-      // Aplicar configuração OpenRouter se necessário
-      if (config.openai.baseURL !== 'https://api.openai.com/v1') {
-        userAgentConfig.openAIConfiguration = {
-          baseURL: config.openai.baseURL,
-          defaultQuery: { model: config.openai.model }
-        };
-      }
+      // Configurar OpenRouter
+      userAgentConfig.openAIConfiguration = {
+        baseURL: config.ai.baseURL,
+        defaultQuery: { model: config.ai.model }
+      };
 
       const userAgent = new HederaConversationalAgent(this.agentSigner, userAgentConfig);
 
@@ -186,7 +182,7 @@ export class AgentService {
     return {
       initialized: this.isInitialized,
       hederaConnected: !!this.agentSigner,
-      aiEnabled: !!this.basicAgent && !!config.openai.apiKey
+      aiEnabled: !!this.basicAgent && !!config.ai.apiKey
     };
   }
 } 
